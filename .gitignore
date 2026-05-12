@@ -216,3 +216,17 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Oceanographic/model data
+*.nc
+*.p
+
+# Large archives
+LiveOcean_obsmod_archive/
+
+# Generated outputs
+figures/
+results/
+
+# macOS
+.DS_Store
