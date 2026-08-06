@@ -24,7 +24,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
-import os
 from pathlib import Path
 import geopandas as gpd
 from geopandas import GeoDataFrame
@@ -32,12 +31,74 @@ from shapely.geometry import Polygon, Point
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
 from xgboost import XGBRegressor
+# %% Reading, unpickling, and combining all existing model-data misfit files
 
-print(os.getcwd())
-
-# Setting path for present work
+# Base directory
 BASE_DIR = Path(__file__).resolve().parent
-file = BASE_DIR / 'LiveOcean_obsmod_archive' / 'combined_bottle_2013_cas7_t1_x11ab.p'
+
+# Folder containing files
+archive_dir = BASE_DIR / 'LiveOcean_obsmod_archive'
+
+# Years to load
+years = range(2013, 2021)   # change as needed
+
+# Empty lists to store yearly dfs
+obs_list = []
+model_list = []
+
+# Loop through files
+for year in years:
+
+    file = archive_dir / f'combined_bottle_{year}_cas7_t1_x11ab.p'
+
+    print(f"Loading {file.name}")
+
+    with open(file, 'rb') as f:
+        data = pickle.load(f)
+
+    # Extract dfs
+    obs_year = data['obs'].copy()
+    model_year = data['cas7_t1_x11ab'].copy()
+
+    # Optional: add year column
+    obs_year['source_year'] = year
+    model_year['source_year'] = year
+
+    # Append to lists
+    obs_list.append(obs_year)
+    model_list.append(model_year)
+
+# Combine all years
+obs = pd.concat(obs_list, ignore_index=True)
+model = pd.concat(model_list, ignore_index=True)
+
+# View variables
+print(list(obs.columns))
+print(list(model.columns))
+
+# Check size
+print(obs.shape)
+print(model.shape)
+
+# Making sure it looks correct
+print(len(obs))
+print(len(model))
+print(obs.index.equals(model.index))
+
+# Which columns differ?
+obs_only = set(obs.columns) - set(model.columns)
+model_only = set(model.columns) - set(obs.columns)
+
+print("Only in obs:")
+print(obs_only)
+
+print("\nOnly in model:")
+print(model_only)
+
+shared = set(obs.columns).intersection(set(model.columns))
+
+print("Shared columns:")
+print(shared)
 # %% Opening and preprocessing DataFrames
 
 # Open dataframes from pickled file
