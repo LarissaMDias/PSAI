@@ -1,2 +1,2 @@
 # PSAI
-Training algorithms on LiveOcean model-data misfits
+This project is under development. Please do not use the code contained in this repository yet.
