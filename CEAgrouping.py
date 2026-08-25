@@ -6,6 +6,7 @@ Created on Tues. Aug 4 2026
 Grouping RCA data into 25 m bins (very close equipment), outputting stations
 or boxes (second part of code) surrounding groups of stations
 
+
 @author: lara
 """
 
@@ -28,7 +29,7 @@ from sklearn.cluster import DBSCAN
 
 
 # First combine all *.csv files into one DataFrame for bottle data
-folder = "/Users/lara/Documents/Python/LiveOcean/RCA_bottle"
+folder = "/Users/lara/Documents/Python/LiveOcean/CEA_bottle"
 csv_files = glob.glob(os.path.join(folder, "*.csv"))
 
 combined_df = pd.concat(
@@ -38,14 +39,11 @@ combined_df = pd.concat(
 
 print(combined_df.head())
 print(combined_df.shape)
-
-# Setting s3fs settings for bucket of other RCA data
-fs = s3fs.S3FileSystem(anon=True)
 # %% Group bottle data 
 
 # Folder containing bottle .csv files
-input_dir = Path('RCA_bottle')
-output_csv = 'combined_bottle_data.csv'
+input_dir = Path('CEA_bottle')
+output_csv = 'CEA_combined_bottle_data.csv'
 
 # Update these to match your files
 lat_col = 'Start Latitude [degrees]'
@@ -69,19 +67,26 @@ combined_df.to_csv(output_csv, index=False)
 
 print(combined_df.head())
 print(f'Wrote {output_csv} with {len(combined_df)} rows from {len(frames)} files')
-# %% Getting all .zarr files and binning them to 500 m station locations with 
-# bottle data 
+# import numpy as np
+import pandas as pd
 
-# --------------------
-# User settings
-# --------------------
-bucket = 'rca-advanced-qaqc'
-prefix = 'cresst'
-output_csv = 'all_25m_lat_lon_bins.csv'
+# %% Adding manually entered CEA locations and binning to 25 m
+
+output_csv = 'CEA_all_25m_lat_lon_bins.csv'
 bin_size_m = 25
 
+# Manual locations are entered as (longitude, latitude).
+CEA_locations = {
+    'OR_inshore': (-124.09628, 44.65961),
+    'OR_shelf': (-124.30320, 44.63532),
+    'OR_offshore': (-124.94600, 44.37800),
+    'WA_inshore': (-124.26924, 47.13381),
+    'WA_shelf': (-124.56442, 46.98729),
+    'WA_offshore': (-124.94966, 46.85402),
+}
+
 # Use an existing bottle DataFrame if present.
-# If not, set bottle_df from a CSV or another variable before running.
+# If no bottle_df or combined_df exists, the script uses only CEA_locations.
 try:
     bottle_df
 except NameError:
@@ -95,103 +100,31 @@ bottle_lat_col = 'Start Latitude [degrees]'
 bottle_lon_col = 'Start Longitude [degrees]'
 bottle_station_col = 'Station'
 
-# Optional: only inspect files matching these patterns.
-# Leave as None to include all .zarr stores under the prefix.
-include_patterns = None
-
-# --------------------
-# Helpers
-# --------------------
-def list_zarr_stores(fs, bucket, prefix, include_patterns=None):
-    paths = sorted([p for p in fs.glob(f'{bucket}/{prefix}/**/*.zarr') if p.endswith('.zarr')])
-    if include_patterns:
-        pats = [p.lower() for p in include_patterns]
-        paths = [p for p in paths if any(pat in p.lower() for pat in pats)]
-    return paths
-
-
-def safe_str(x, default=''):
-    if x is None:
-        return default
-    if isinstance(x, float) and np.isnan(x):
-        return default
-    s = str(x).strip()
-    return s if s and s.lower() != 'nan' else default
-
 
 def join_unique(values):
-    vals = []
-    for v in values:
-        if pd.isna(v):
-            continue
-        s = str(v).strip()
-        if not s or s.lower() == 'nan':
-            continue
-        vals.append(s)
-    return ', '.join(sorted(set(vals)))
+    values = pd.Series(values).dropna().astype(str).str.strip()
+    values = values[values != '']
+    return '; '.join(pd.unique(values))
 
 
-def resolve_column(df, preferred=None, candidates=None, label='column'):
-    if preferred and preferred in df.columns:
+def resolve_column(df, preferred, candidates, label):
+    if preferred in df.columns:
         return preferred
-    if candidates:
-        for c in candidates:
-            if c in df.columns:
-                return c
-    raise KeyError(f'Could not find a {label}. Available columns: {list(df.columns)}')
+    for column in candidates:
+        if column in df.columns:
+            print(f'Using {column!r} for {label}.')
+            return column
+    raise KeyError(
+        f'Could not find {label}. Tried: {preferred!r}, {candidates}'
+    )
 
 
-def extract_root_attrs(zarr_metadata):
-    if not isinstance(zarr_metadata, dict):
-        return {}
-    if 'attributes' in zarr_metadata and isinstance(zarr_metadata['attributes'], dict):
-        return zarr_metadata['attributes']
-    if 'attrs' in zarr_metadata and isinstance(zarr_metadata['attrs'], dict):
-        return zarr_metadata['attrs']
-    return {}
+def bin_coordinates(df, lat_col='latitude', lon_col='longitude', bin_size_m=25):
+    """Assign each coordinate to a local metric bin and calculate its bin center."""
+    if df.empty:
+        return df.copy()
 
-
-def pick_coord(attrs, *keys):
-    for k in keys:
-        v = attrs.get(k)
-        if v is not None and not (isinstance(v, float) and np.isnan(v)):
-            return float(v)
-    return np.nan
-
-
-def extract_point_from_zarr_metadata(fs, zarr_path):
-    meta_path = f'{zarr_path}/zarr.json'
-    try:
-        with fs.open(meta_path, 'r') as f:
-            metadata = json.load(f)
-    except Exception:
-        return pd.DataFrame(columns=['latitude', 'longitude', 'source', 'source_name', 'station_name', 'source_file'])
-
-    attrs = extract_root_attrs(metadata)
-    lat = pick_coord(attrs, 'geospatial_lat_min', 'geospatial_lat_max', 'latitude', 'lat')
-    lon = pick_coord(attrs, 'geospatial_lon_min', 'geospatial_lon_max', 'longitude', 'lon')
-
-    if np.isnan(lat) or np.isnan(lon):
-        return pd.DataFrame(columns=['latitude', 'longitude', 'source', 'source_name', 'station_name', 'source_file'])
-
-    base = os.path.basename(zarr_path).replace('.zarr', '')
-    source_name = safe_str(attrs.get('id') or attrs.get('source') or attrs.get('title') or base, base)
-    station_name = safe_str(attrs.get('subsite') or attrs.get('node') or attrs.get('station') or attrs.get('site') or base, base)
-
-    return pd.DataFrame([
-        {
-            'latitude': lat,
-            'longitude': lon,
-            'source': 'zarr',
-            'source_name': source_name,
-            'station_name': station_name,
-            'source_file': base,
-        }
-    ])
-
-
-def bin_500m(df, lat_col='latitude', lon_col='longitude', bin_size_m=25):
-    ref_lat = df[lat_col].dropna().mean()
+    ref_lat = df[lat_col].mean()
     meters_per_deg_lat = 111_320.0
     meters_per_deg_lon = 111_320.0 * np.cos(np.radians(ref_lat))
 
@@ -200,48 +133,56 @@ def bin_500m(df, lat_col='latitude', lon_col='longitude', bin_size_m=25):
     working['_y_m'] = working[lat_col] * meters_per_deg_lat
     working['_x_bin'] = np.floor(working['_x_m'] / bin_size_m).astype('Int64')
     working['_y_bin'] = np.floor(working['_y_m'] / bin_size_m).astype('Int64')
-    working['_x_center_m'] = (working['_x_bin'] + 0.5) * bin_size_m
-    working['_y_center_m'] = (working['_y_bin'] + 0.5) * bin_size_m
+    working['_x_center_m'] = (working['_x_bin'].astype(float) + 0.5) * bin_size_m
+    working['_y_center_m'] = (working['_y_bin'].astype(float) + 0.5) * bin_size_m
     working['Center_Lon'] = working['_x_center_m'] / meters_per_deg_lon
     working['Center_Lat'] = working['_y_center_m'] / meters_per_deg_lat
     return working
 
-# --------------------
-# Build combined coordinate table
-# --------------------
-fs = s3fs.S3FileSystem(anon=True)
-zarr_paths = list_zarr_stores(fs, bucket, prefix, include_patterns=include_patterns)
-print(f'Found {len(zarr_paths)} .zarr stores under {bucket}/{prefix}')
 
-zarr_frames = []
-for zp in zarr_paths:
-    print(f'Reading {zp}')
-    zdf = extract_point_from_zarr_metadata(fs, zp)
-    if not zdf.empty:
-        zarr_frames.append(zdf)
-
-zarr_df = pd.concat(zarr_frames, ignore_index=True) if zarr_frames else pd.DataFrame(
-    columns=['latitude', 'longitude', 'source', 'source_name', 'station_name', 'source_file']
+# --------------------
+# Manual CEA data
+# --------------------
+cea_df = pd.DataFrame(
+    [
+        {
+            'latitude': lat,
+            'longitude': lon,
+            'source': 'CEA',
+            'source_name': name,
+            'station_name': name,
+            'source_file': 'manual_CEA_locations',
+        }
+        for name, (lon, lat) in CEA_locations.items()
+    ]
 )
-print(f'Zarr rows extracted: {len(zarr_df)}')
+
+print(f'Manual CEA locations: {len(cea_df)}')
 
 # --------------------
-# Bottle data
+# Optional bottle data
 # --------------------
 bottle_df = bottle_df.copy()
+
 if bottle_df.empty:
-    print('No bottle_df provided; proceeding with Zarr data only.')
+    print('No bottle_df provided; proceeding with CEA locations only.')
 else:
     bottle_lat_col = resolve_column(
         bottle_df,
         preferred=bottle_lat_col,
-        candidates=['Start Latitude [degrees]', 'latitude', 'Latitude', 'lat', 'LATITUDE'],
+        candidates=[
+            'Start Latitude [degrees]', 'latitude', 'Latitude',
+            'lat', 'LATITUDE'
+        ],
         label='bottle latitude column',
     )
     bottle_lon_col = resolve_column(
         bottle_df,
         preferred=bottle_lon_col,
-        candidates=['Start Longitude [degrees]', 'longitude', 'Longitude', 'lon', 'LON', 'LONGITUDE'],
+        candidates=[
+            'Start Longitude [degrees]', 'longitude', 'Longitude',
+            'lon', 'LON', 'LONGITUDE'
+        ],
         label='bottle longitude column',
     )
     bottle_station_col = resolve_column(
@@ -251,31 +192,60 @@ else:
         label='bottle station column',
     )
 
-    bottle_df = bottle_df.rename(columns={bottle_lat_col: 'latitude', bottle_lon_col: 'longitude'})
+    bottle_df = bottle_df.rename(
+        columns={
+            bottle_lat_col: 'latitude',
+            bottle_lon_col: 'longitude',
+        }
+    )
     bottle_df['source'] = 'bottle'
     bottle_df['source_name'] = bottle_df[bottle_station_col].astype(str)
     bottle_df['station_name'] = bottle_df[bottle_station_col].astype(str)
     bottle_df['source_file'] = 'bottle_data'
-    bottle_df = bottle_df[['latitude', 'longitude', 'source', 'source_name', 'station_name', 'source_file']].copy()
-    bottle_df = bottle_df.replace([np.inf, -np.inf], np.nan).dropna(subset=['latitude', 'longitude'])
+    bottle_df = bottle_df[
+        [
+            'latitude', 'longitude', 'source', 'source_name',
+            'station_name', 'source_file'
+        ]
+    ].copy()
+    bottle_df = (
+        bottle_df
+        .replace([np.inf, -np.inf], np.nan)
+        .dropna(subset=['latitude', 'longitude'])
+    )
     print(f'Bottle rows: {len(bottle_df)}')
 
 # --------------------
 # Combine and bin
 # --------------------
-combined = pd.concat([df for df in [bottle_df, zarr_df] if not df.empty], ignore_index=True)
-combined = combined.replace([np.inf, -np.inf], np.nan).dropna(subset=['latitude', 'longitude'])
-print(f'Combined rows: {len(combined)}')
+combined = pd.concat(
+    [df for df in [bottle_df, cea_df] if not df.empty],
+    ignore_index=True,
+)
+combined = (
+    combined
+    .replace([np.inf, -np.inf], np.nan)
+    .dropna(subset=['latitude', 'longitude'])
+)
 
 if combined.empty:
-    raise ValueError('No valid coordinates found in bottle or Zarr data.')
+    raise ValueError('No valid coordinates found in bottle or CEA data.')
 
-working = bin_500m(combined, lat_col='latitude', lon_col='longitude', bin_size_m=bin_size_m)
+working = bin_coordinates(
+    combined,
+    lat_col='latitude',
+    lon_col='longitude',
+    bin_size_m=bin_size_m,
+)
 
-# Group into unique 500 m bins and keep labels
+# One row per unique spatial bin, retaining labels for all points in each bin.
 bins = (
-    working.dropna(subset=['_x_bin', '_y_bin'])
-    .groupby(['_x_bin', '_y_bin', 'Center_Lat', 'Center_Lon'], as_index=False)
+    working
+    .dropna(subset=['_x_bin', '_y_bin'])
+    .groupby(
+        ['_x_bin', '_y_bin', 'Center_Lat', 'Center_Lon'],
+        as_index=False,
+    )
     .agg(
         n_records=('latitude', 'size'),
         Sources=('source', join_unique),
@@ -288,13 +258,13 @@ bins = (
 )
 
 bins.to_csv(output_csv, index=False)
-print(bins.head())
-print(f'Wrote {output_csv} with {len(bins)} unique 100 m bins')
 
+print(bins)
+print(f'Wrote {output_csv} with {len(bins)} unique {bin_size_m} m bins.')
 
 # %% Map them
 
-csv_file = r"/Users/lara/Documents/Python/LiveOcean/all_25m_lat_lon_bins.csv"
+csv_file = r"/Users/lara/Documents/Python/LiveOcean/CEA_all_25m_lat_lon_bins.csv"
 lat_col = "Center_Lat"
 lon_col = "Center_Lon"
 
@@ -340,7 +310,7 @@ plt.tight_layout()
 plt.show()
 # %% Finding clusters
 
-csv_file = r"/Users/lara/Documents/Python/LiveOcean/all_25m_lat_lon_bins.csv"
+csv_file = r"/Users/lara/Documents/Python/LiveOcean/CEA_all_25m_lat_lon_bins.csv"
 lat_col = "Center_Lat"
 lon_col = "Center_Lon"
 
@@ -473,6 +443,3 @@ ax.legend()
 ax.set_aspect("equal")
 plt.tight_layout()
 plt.show()
-
-
-
