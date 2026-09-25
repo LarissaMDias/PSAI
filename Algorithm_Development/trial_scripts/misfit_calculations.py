@@ -23,6 +23,11 @@ For model initial trial, I want:
 # Unhash if need to find the working directory/issues/debug
 #import os 
 #print(os.getcwd())
+from pathlib import Path
+import sys
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
 
 import pickle
 import pandas as pd
@@ -49,11 +54,11 @@ from matplotlib.colors import LinearSegmentedColormap
 # Reading, unpickling, and combining all existing model-data misfit files, 
 # Which consist of pandas DataFrames
 
-# Base directory
-BASE_DIR = Path(__file__).resolve().parent
+# misfit_calculations.py is in:
+# LiveOcean/Algorithm_Development/trial_scripts/
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Folder containing files
-archive_dir = BASE_DIR / 'LiveOcean_obsmod_archive'
+archive_dir = PROJECT_ROOT / "Model_Observation_Pairing/LiveOcean_obsmod_archive"
 
 # Years to load
 years = range(2013, 2025)   # change as needed
