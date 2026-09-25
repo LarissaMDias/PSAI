@@ -7,7 +7,7 @@ Reads in pre-calculated model-data misfits (residuals) for processing in
 algorithm development scripts.
 
 Functions: 
-    misfit_readin(): Reads and combines yearly misfit DataFrames    
+    misfit_readin(): reads and combines yearly misfit DataFrames    
 
 @author: larissadias
 """
@@ -17,8 +17,8 @@ import pandas as pd
 
 def misfit_readin():
     
-    # Reading, unpickling, and combining all existing model-data misfit files, 
-    # which consist of pandas DataFrames.
+    """Reading, unpickling, and combining all existing model-data misfit files, 
+    which consist of pandas DataFrames."""
 
     # misfit_readin.py is in:
     # LiveOcean/Algorithm_Development/

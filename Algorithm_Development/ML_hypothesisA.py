@@ -13,9 +13,38 @@ Initial machine learning training, testing the following hypothesis:
 
 from misfit_readin import misfit_readin
 from data_checkout import source_check
+from data_checkout import data_frequency
+from sanity_checks import sanity_checks
+from leap_year_check import leap_year_check
+from sanity_checks import worked_check
+from data_explore import location_frequency
+from data_explore import map_location
+from subregion_creation import subregion_creation
+import pandas as pd
 
 # Reading in the misfit data
 obs, model = misfit_readin()
 
-# Checking out data sources
+# Checking out data sources, unhash as needed
 source_check(obs, model)
+
+# Convert time in YYYY-MM-DD HH:SS:MM to DOY
+for df in [obs, model]:
+    df['time'] = pd.to_datetime(df['time'], utc=True) # Correcting to UTC first
+    df['DOY'] = df['time'].dt.dayofyear
+    
+df_cast, summary = data_frequency(obs)
+
+obs, model = sanity_checks(obs, model, key_cols=None, deduplicate=False) 
+
+# Duplicate handling here, as needed
+
+obs, model, leap_years = leap_year_check(obs, model)
+
+#worked_check(obs, model)
+
+#location_frequency(obs, model)
+
+#map_location(obs, model)
+
+obs, model = subregion_creation(obs, model)
