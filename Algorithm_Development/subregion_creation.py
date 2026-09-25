@@ -23,26 +23,11 @@ def subregion_creation(
     basin_url: str = DEFAULT_BASIN_URL,
     plot: bool = False,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Add geographic region columns to observation and model DataFrames.
+    """Add broad and basin-based geographic region columns.
 
-    Parameters
-    ----------
-    obs, model
-        DataFrames containing numeric ``lon`` and ``lat`` columns.
-    base_dir
-        Directory containing the ``N45W125/N45W125.shp`` shapefile.
-        If omitted, assumes this module is in ``LiveOcean/Algorithm_Development``
-        and uses ``LiveOcean`` as the project root.
-    basin_url
-        GeoJSON/ArcGIS URL for Puget Sound basin polygons.
-    plot
-        If True, plot the basin polygons, coastline, and data points.
-
-    Returns
-    -------
-    tuple[pd.DataFrame, pd.DataFrame]
-        Copies of ``obs`` and ``model`` with ``region`` and, where available,
-        ``basin`` columns.
+    ``base_dir`` must contain ``N45W125/N45W125.shp``. If omitted, the
+    function assumes this file is in ``LiveOcean/Misc/N45W125`` and that this
+    module is in ``LiveOcean/Algorithm_Development``.
     """
     required = {"lon", "lat"}
     for label, df in (("obs", obs), ("model", model)):
@@ -53,10 +38,10 @@ def subregion_creation(
     obs_out = obs.copy()
     model_out = model.copy()
 
-    # BASE_DIR should be an actual Path object. This default assumes:
-    # LiveOcean/Algorithm_Development/subregion_creation.py
+    # base_dir is the directory containing the N45W125 folder.
     if base_dir is None:
-        base_dir = Path(__file__).resolve().parents[1]
+        project_root = Path(__file__).resolve().parents[1]
+        base_dir = project_root / "Misc"
     else:
         base_dir = Path(base_dir).expanduser().resolve()
 
@@ -66,23 +51,10 @@ def subregion_creation(
 
     print(f"Reading coastal shapefile: {shapefile}")
     coast_gdf = gpd.read_file(shapefile)
-    print(f"Coastal layer CRS: {coast_gdf.crs}")
-    print(coast_gdf.geometry.geom_type.value_counts())
-
     if coast_gdf.crs is None:
         raise ValueError("The coastal shapefile has no CRS defined.")
     coast_gdf = coast_gdf.to_crs("EPSG:4326")
 
-    # Make a point layer for each table. WGS84 matches lon/lat and the URL output.
-    def make_points(df: pd.DataFrame) -> gpd.GeoDataFrame:
-        return gpd.GeoDataFrame(
-            df.copy(),
-            geometry=gpd.points_from_xy(df["lon"], df["lat"]),
-            crs="EPSG:4326",
-        )
-
-    # Broad preliminary classification. Replace these bounds with bathymetry
-    # when a shelf/offshore mask becomes available.
     def add_broad_region(df: pd.DataFrame) -> pd.DataFrame:
         out = df.copy()
         out["region"] = "offshore"
@@ -93,11 +65,16 @@ def subregion_creation(
         out.loc[coastal, "region"] = "coastal"
         return out
 
+    def make_points(df: pd.DataFrame) -> gpd.GeoDataFrame:
+        return gpd.GeoDataFrame(
+            df.copy(),
+            geometry=gpd.points_from_xy(df["lon"], df["lat"]),
+            crs="EPSG:4326",
+        )
+
     obs_out = add_broad_region(obs_out)
     model_out = add_broad_region(model_out)
 
-    # Load basin polygons. This requires internet access unless basin_url is
-    # replaced with a local file path.
     basin_gdf = gpd.read_file(basin_url)
     if basin_gdf.crs is None:
         basin_gdf = basin_gdf.set_crs("EPSG:4326")
@@ -117,11 +94,11 @@ def subregion_creation(
                 predicate="within",
             )
             joined = joined[~joined.index.duplicated(keep="first")]
+
             out = df.copy()
             out["basin"] = joined[basin_column].reindex(df.index).to_numpy()
-            out.loc[out["basin"].notna(), "region"] = out.loc[
-                out["basin"].notna(), "basin"
-            ]
+            in_basin = out["basin"].notna()
+            out.loc[in_basin, "region"] = out.loc[in_basin, "basin"]
             return out
 
         obs_out = assign_basins(obs_out)
@@ -131,9 +108,24 @@ def subregion_creation(
 
     if plot:
         fig, ax = plt.subplots(figsize=(10, 8))
-        basin_gdf.plot(ax=ax, column=basin_column, alpha=0.6, legend=True) if basin_column else basin_gdf.plot(ax=ax, alpha=0.6)
+        if basin_column:
+            basin_gdf.plot(
+                ax=ax,
+                column=basin_column,
+                alpha=0.6,
+                legend=True,
+            )
+        else:
+            basin_gdf.plot(ax=ax, alpha=0.6)
+
         coast_gdf.boundary.plot(ax=ax, color="black", linewidth=1)
-        ax.scatter(obs_out["lon"], obs_out["lat"], s=5, color="red", label="Observations")
+        ax.scatter(
+            obs_out["lon"],
+            obs_out["lat"],
+            s=5,
+            color="red",
+            label="Observations",
+        )
         ax.set_xlabel("Longitude")
         ax.set_ylabel("Latitude")
         ax.set_title("Assigned subregions")
@@ -142,7 +134,3 @@ def subregion_creation(
         plt.show()
 
     return obs_out, model_out
-
-
-if __name__ == "__main__":
-    print("Import subregion_creation() from this module and call it with obs and model.")

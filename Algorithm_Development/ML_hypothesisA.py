@@ -20,6 +20,7 @@ from sanity_checks import worked_check
 from data_explore import location_frequency
 from data_explore import map_location
 from subregion_creation import subregion_creation
+from chla_conversion import chla_conversion
 import pandas as pd
 
 # Reading in the misfit data
@@ -48,3 +49,15 @@ obs, model, leap_years = leap_year_check(obs, model)
 #map_location(obs, model)
 
 obs, model = subregion_creation(obs, model)
+
+# Obtain decimal year
+def decimal_year(t):
+    year = t.dt.year
+    start = pd.to_datetime(year.astype(str) + '-01-01', utc=True)
+    end = pd.to_datetime((year + 1).astype(str) + '-01-01', utc=True)
+    return year + (t - start) / (end - start)
+
+obs['decimal_year'] = decimal_year(obs['time'])
+model['decimal_year'] = obs['decimal_year']
+
+obs, model = chla_conversion(obs, model)
