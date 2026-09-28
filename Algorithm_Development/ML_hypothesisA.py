@@ -25,6 +25,11 @@ from model_df_create import model_df_create
 from withhold_test_years import withhold_test_years
 from make_single_target_data import make_single_target_data
 from plot_withhelddata import plot_withhelddata
+from k_fold import make_cv_splits
+from map_k_fold import map_k_fold
+from xgb_single_target_cv import run_xgb_cv
+
+
 import pandas as pd
 
 # Reading in the misfit data
@@ -79,9 +84,10 @@ results = make_single_target_data(X_A, y, X_0, y)
 splits = withhold_test_years(
     results,
     step=5,
-    remove_year_column=True,
+    remove_year_column=False,
 )
 
+# Choose one to plot
 plot_withhelddata(
     splits,
     target="TA_misfit",
@@ -92,4 +98,57 @@ plot_withhelddata(
     splits,
     target="TA_misfit",
     hypothesis="0",
+)
+
+# Create folds from the remaining training data
+cv_splits = make_cv_splits(
+    splits,
+    methods=("year",), # depending on data availability, could also be source or cruise
+    n_splits=5,
+)
+
+# Can map the k-fold splits here
+map_k_fold(
+    cv_splits,
+    target="TA_misfit",
+    method="year",
+    fold=1,
+    hypothesis="A",
+)
+map_k_fold(
+    cv_splits,
+    target="TA_misfit",
+    method="year",
+    fold=2,
+    hypothesis="A",
+)
+map_k_fold(
+    cv_splits,
+    target="TA_misfit",
+    method="year",
+    fold=3,
+    hypothesis="A",
+)
+map_k_fold(
+    cv_splits,
+    target="TA_misfit",
+    method="year",
+    fold=4,
+    hypothesis="A",
+)
+map_k_fold(
+    cv_splits,
+    target="TA_misfit",
+    method="year",
+    fold=5,
+    hypothesis="A",
+)
+
+fold_results, predictions, models = run_xgb_cv(
+    cv_splits,
+    target="TA_misfit",
+    method="year",      # "year", "source", or another available method
+    hypothesis="A",       # use "0" for the null hypothesis
+    tune=True,
+    n_iter=20,
 )

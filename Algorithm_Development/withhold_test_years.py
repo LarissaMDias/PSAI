@@ -8,8 +8,13 @@ Created on Mon Sep 28 11:38:31 2026
 from __future__ import annotations
 
 from collections.abc import Mapping
+from typing import Any
+
 import numpy as np
 import pandas as pd
+
+
+_METADATA_COLUMNS = ("source_year", "source", "cruise", "name")
 
 
 def withhold_test_years(
@@ -17,31 +22,16 @@ def withhold_test_years(
     *,
     year_col: str = "source_year",
     step: int = 5,
-    remove_year_column: bool = True,
+    remove_year_column: bool = False,
 ) -> dict[str, dict[str, pd.DataFrame | np.ndarray]]:
-    """Split each single-target dataset into synchronized train/test sets.
+    """Split every target into synchronized train/test sets by calendar year.
 
-    Parameters
-    ----------
-    results
-        Dictionary returned by ``make_single_target_data``. Each target must
-        contain ``X_A``, ``y_A``, ``X_0``, and ``y_0`` DataFrames.
-    year_col
-        Column used to define the temporal split.
-    step
-        Select every ``step``-th sorted year for testing. With ``step=5`` and
-        years 2013--2024, this selects 2013, 2018, and 2023.
-    remove_year_column
-        Drop ``year_col`` from the returned predictor DataFrames after the
-        split. Set False if the year should remain available.
+    The same sorted calendar years are withheld for every target and for both
+    hypotheses. Metadata remain in X_A and X_0 by default so later grouped or
+    spatial cross-validation can use them. They should be removed only when
+    constructing the final model-predictor matrices.
 
-    Returns
-    -------
-    dict
-        ``splits[target]`` contains:
-        ``X_A_train``, ``X_A_test``, ``X_0_train``, ``X_0_test``,
-        ``y_A_train``, ``y_A_test``, ``y_0_train``, ``y_0_test``, and
-        ``test_years``.
+    With ``step=5`` and years 2013--2024, this selects 2013, 2018, and 2023.
     """
     if not results:
         raise ValueError("results is empty")
@@ -51,7 +41,6 @@ def withhold_test_years(
     required = {"X_A", "y_A", "X_0", "y_0"}
     all_years: set[int] = set()
 
-    # Validate inputs and collect years for one shared calendar-year split.
     for target, data in results.items():
         missing = required - set(data)
         if missing:
@@ -83,27 +72,33 @@ def withhold_test_years(
 
         all_years.update(years_A.astype(int).unique().tolist())
 
-    test_years = np.sort(np.asarray(sorted(all_years), dtype=int))[::step]
+    test_years = np.asarray(sorted(all_years), dtype=int)[::step]
     test_year_set = set(test_years.tolist())
-    splits: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
+    output: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
 
     for target, data in results.items():
         X_A, y_A, X_0, y_0 = (data[name] for name in ("X_A", "y_A", "X_0", "y_0"))
         years = pd.to_numeric(X_A[year_col], errors="raise").astype(int)
         test_mask = years.isin(test_year_set).to_numpy()
 
-        def split(frame: pd.DataFrame, *, drop_year: bool = False):
-            train = frame.loc[~test_mask].copy()
-            test = frame.loc[test_mask].copy()
-            if drop_year and year_col in train.columns:
+        def split_X(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+            train = df.loc[~test_mask].copy()
+            test = df.loc[test_mask].copy()
+            if remove_year_column and year_col in train.columns:
                 train = train.drop(columns=year_col)
                 test = test.drop(columns=year_col)
             return train.reset_index(drop=True), test.reset_index(drop=True)
 
-        X_A_train, X_A_test = split(X_A, drop_year=remove_year_column)
-        X_0_train, X_0_test = split(X_0, drop_year=remove_year_column)
-        y_A_train, y_A_test = split(y_A)
-        y_0_train, y_0_test = split(y_0)
+        def split_y(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+            return (
+                df.loc[~test_mask].reset_index(drop=True).copy(),
+                df.loc[test_mask].reset_index(drop=True).copy(),
+            )
+
+        X_A_train, X_A_test = split_X(X_A)
+        X_0_train, X_0_test = split_X(X_0)
+        y_A_train, y_A_test = split_y(y_A)
+        y_0_train, y_0_test = split_y(y_0)
 
         train_years = sorted(years[~test_mask].unique().tolist())
         target_test_years = sorted(years[test_mask].unique().tolist())
@@ -112,7 +107,7 @@ def withhold_test_years(
         print(f"{target}: training rows = {len(X_A_train):,}")
         print(f"{target}: testing rows = {len(X_A_test):,}")
 
-        splits[target] = {
+        output[target] = {
             "X_A_train": X_A_train,
             "X_A_test": X_A_test,
             "X_0_train": X_0_train,
@@ -125,4 +120,4 @@ def withhold_test_years(
         }
 
     print(f"Shared test years: {test_years.tolist()}")
-    return splits
+    return output
