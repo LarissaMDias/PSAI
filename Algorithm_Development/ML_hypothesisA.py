@@ -21,13 +21,18 @@ from data_explore import location_frequency
 from data_explore import map_location
 from subregion_creation import subregion_creation
 from chla_conversion import chla_conversion
+from model_df_create import model_df_create
 import pandas as pd
 
 # Reading in the misfit data
 obs, model = misfit_readin()
 
+# Checking available variables
+print(model.columns.tolist())
+print(obs.columns.tolist())
+
 # Checking out data sources, unhash as needed
-source_check(obs, model)
+#source_check(obs, model)
 
 # Convert time in YYYY-MM-DD HH:SS:MM to DOY
 for df in [obs, model]:
@@ -61,3 +66,6 @@ obs['decimal_year'] = decimal_year(obs['time'])
 model['decimal_year'] = obs['decimal_year']
 
 obs, model = chla_conversion(obs, model)
+
+# Creating a DataFrame for model training and testing
+X, y = model_df_create(obs, model)

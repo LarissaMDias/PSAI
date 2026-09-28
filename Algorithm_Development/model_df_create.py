@@ -5,95 +5,74 @@ Created on Fri Sep 25 15:24:30 2026
 
 @author: larissadias
 """
+from __future__ import annotations
+
 import numpy as np
+import pandas as pd
 
-def model_df_create(obs, model):
-    #Quick check of alignment
-    print("shape of model and obs")
-    print(model.shape)
-    print(obs.shape)
-    print("does the model index equal the obs index?")
-    print(model.index.equals(obs.index))
 
-    # Create working dataframe
-    df_ml = model.copy()
+def model_df_create(obs: pd.DataFrame, model: pd.DataFrame):
+    """Create predictors X and multiple misfit targets y.
 
-    # Add observations and calculate misfits
-    df_ml['TA_model'] = model['TA (uM)']
-    df_ml['TA_obs']   = obs['TA (uM)']
-    df_ml['TA_misfit'] = df_ml['TA_model'] - df_ml['TA_obs']
+    Misfits use the convention model value minus observation value.
+    """
+    if not obs.index.equals(model.index):
+        raise ValueError("obs and model must have identical row indexes")
 
-    df_ml['DIC_model'] = model['DIC (uM)']
-    df_ml['DIC_obs']   = obs['DIC (uM)']
-    df_ml['DIC_misfit'] = df_ml['DIC_model'] - df_ml['DIC_obs']
-    
-    df_ml['SA_model'] = model['SA']
-    df_ml['SA_obs']   = obs['SA']
-    df_ml['SA_misfit'] = df_ml['SA_model'] - df_ml['SA_obs']
+    pairs = {
+        "TA_misfit": ("TA (uM)", "TA (uM)"),
+        "DIC_misfit": ("DIC (uM)", "DIC (uM)"),
+        "SA_misfit": ("SA", "SA"),
+        "CT_misfit": ("CT", "CT"),
+        "DO_misfit": ("DO (uM)", "DO (uM)"),
+        "NO3_misfit": ("NO3 (uM)", "NO3 (uM)"),
+        "logChl_misfit": ("log_Chl", "log_Chl"),
+        "NH4_misfit": ("NH4 (uM)", "NH4 (uM)"),
+    }
 
-    df_ml['CT_model'] = model['CT']
-    df_ml['CT_obs']   = obs['CT']
-    df_ml['CT_misfit'] = df_ml['CT_model'] - df_ml['CT_obs']
-    
-    df_ml['DO_model'] = model['DO (uM)']
-    df_ml['DO_obs']   = obs['DO (uM)']
-    df_ml['DO_misfit'] = df_ml['DO_model'] - df_ml['DO_obs']
-    
-    df_ml['NO3_model'] = model['NO3 (uM)']
-    df_ml['NO3_obs']   = obs['NO3 (uM)']
-    df_ml['NO3_misfit'] = df_ml['NO3_model'] - df_ml['NO3_obs']
-    
-    df_ml['logChl_model'] = model['log_Chl']
-    df_ml['logChl_obs']   = obs['log_Chl']
-    df_ml['logChl_misfit'] = df_ml['logChl_model'] - df_ml['logChl_obs']
-    
-    df_ml['NH4_model'] = model['NH4 (uM)']
-    df_ml['NH4_obs']   = obs['NH4 (uM)']
-    df_ml['NH4_misfit'] = df_ml['NH4_model'] - df_ml['NH4_obs']
-    
-    df_ml['SiO4_model'] = model['SiO4 (uM)']
-    df_ml['SiO4_obs']   = obs['SiO4']
-    df_ml['SiO4_misfit'] = df_ml['SiO4_model'] - df_ml['SiO4_obs']
+    missing = {
+        f"obs: {obs_col}"
+        for model_col, obs_col in pairs.values()
+        if obs_col not in obs.columns
+    }
+    missing |= {
+        f"model: {model_col}"
+        for model_col, obs_col in pairs.values()
+        if model_col not in model.columns
+    }
+    if missing:
+        raise KeyError(f"Missing columns: {sorted(missing)}")
 
-    # Replace infinities
-    df_ml = df_ml.replace([np.inf, -np.inf], np.nan)
+    df = model.copy()
+    y = pd.DataFrame(index=df.index)
 
-    # Fill region
-    df_ml['region'] = df_ml['region'].fillna('unknown')
-# STOPPED HERE
-    # Features
+    for target, (model_col, obs_col) in pairs.items():
+        y[target] = model[model_col] - obs[obs_col]
+
+    df = df.replace([np.inf, -np.inf], np.nan)
+    y = y.replace([np.inf, -np.inf], np.nan)
+
     features = [
-        'lat','lon','z',
-        'decimal_year',
-        'sin_doy','cos_doy',
-        'region',
-        'SA','CT',
-        'DO (uM)',
-        'Chl (mg m-3)',
-        'NH4 (uM)'
+        "lat", "lon", "z", "decimal_year", "sin_doy", "cos_doy",
+        "region", "SA", "CT", "TA", "DIC", "DO (uM)",
+        "NO3 (uM)", "log_Chl", "NH4 (uM)",
     ]
+    features = [column for column in features if column in df.columns]
+    X = df[features].copy()
 
-    X_TA = df_ml_TA[features].copy()
-    X_DIC = df_ml_DIC[features].copy()
+    if "region" in X.columns:
+        X["region"] = X["region"].fillna("unknown")
+        X = pd.get_dummies(X, columns=["region"], dtype=float)
 
-    # Fill missing predictors
-    X_TA = X_TA.fillna(X_TA.median(numeric_only=True))
-    X_DIC = X_DIC.fillna(X_DIC.median(numeric_only=True))
+    numeric = X.select_dtypes(include="number").columns
+    X[numeric] = X[numeric].fillna(X[numeric].median())
 
-    # Encode region
-    X_TA = pd.get_dummies(X_TA, columns=['region'])
-    X_DIC = pd.get_dummies(X_DIC, columns=['region'])
+    # Multi-output estimators generally require complete target rows.
+    keep = y.notna().all(axis=1)
+    X = X.loc[keep].reset_index(drop=True)
+    y = y.loc[keep].reset_index(drop=True)
 
-    # Targets
-    y_TA = df_ml_TA['TA_misfit']
-    y_DIC = df_ml_DIC['DIC_misfit']
+    return X, y
 
-    # Final sanity check
-    print("TA samples:", len(X_TA))
-    print("DIC samples:", len(X_DIC))
 
-    print("NaNs in X_TA:", X_TA.isna().sum().sum())
-    print("NaNs in X_DIC:", X_DIC.isna().sum().sum())
-
-    print("NaNs in y_TA:", y_TA.isna().sum())
-    print("NaNs in y_DIC:", y_DIC.isna().sum())
+  
