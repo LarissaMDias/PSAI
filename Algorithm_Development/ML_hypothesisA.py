@@ -22,6 +22,9 @@ from data_explore import map_location
 from subregion_creation import subregion_creation
 from chla_conversion import chla_conversion
 from model_df_create import model_df_create
+from withhold_test_years import withhold_test_years
+from make_single_target_data import make_single_target_data
+from plot_withhelddata import plot_withhelddata
 import pandas as pd
 
 # Reading in the misfit data
@@ -67,5 +70,26 @@ model['decimal_year'] = obs['decimal_year']
 
 obs, model = chla_conversion(obs, model)
 
-# Creating a DataFrame for model training and testing
-X, y = model_df_create(obs, model)
+# Creating DataFrame for model training and testingm _0 is null 
+# hypothesis and _A is test hypothesis
+X_A, y, X_0, _ = model_df_create(obs, model)
+
+results = make_single_target_data(X_A, y, X_0, y)
+
+splits = withhold_test_years(
+    results,
+    step=5,
+    remove_year_column=True,
+)
+
+plot_withhelddata(
+    splits,
+    target="TA_misfit",
+    hypothesis="A",
+)
+
+plot_withhelddata(
+    splits,
+    target="TA_misfit",
+    hypothesis="0",
+)
