@@ -1,0 +1,6 @@
+target,method,hypothesis,fold,n_train,n_valid,rmse,mae,r2,best_params
+TA_misfit,year,A,1,3245,1299,41.80337239035354,21.556779098381877,0.4969811944770073,"{'subsample': 1.0, 'reg_lambda': 1.0, 'n_estimators': 200, 'min_child_weight': 3, 'max_depth': 6, 'learning_rate': 0.02, 'colsample_bytree': 1.0}"
+TA_misfit,year,A,2,3521,1023,38.22138487730219,21.06766642538468,0.1514106021930165,"{'subsample': 0.7, 'reg_lambda': 10.0, 'n_estimators': 800, 'min_child_weight': 1, 'max_depth': 6, 'learning_rate': 0.05, 'colsample_bytree': 0.8}"
+TA_misfit,year,A,3,3604,940,28.39359616667353,17.91508742631392,0.23528612916251068,"{'subsample': 0.7, 'reg_lambda': 10.0, 'n_estimators': 200, 'min_child_weight': 1, 'max_depth': 3, 'learning_rate': 0.05, 'colsample_bytree': 0.7}"
+TA_misfit,year,A,4,3816,728,28.397300154034323,17.319222926839103,-0.311457779935985,"{'subsample': 0.7, 'reg_lambda': 10.0, 'n_estimators': 200, 'min_child_weight': 1, 'max_depth': 3, 'learning_rate': 0.05, 'colsample_bytree': 0.7}"
+TA_misfit,year,A,5,3990,554,63.08605367185442,22.35579531600196,-0.0006913945986348757,"{'subsample': 0.7, 'reg_lambda': 10.0, 'n_estimators': 200, 'min_child_weight': 1, 'max_depth': 3, 'learning_rate': 0.05, 'colsample_bytree': 0.7}"

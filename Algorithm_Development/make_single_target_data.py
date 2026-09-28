@@ -9,66 +9,95 @@ Created on Mon Sep 28 12:23:13 2026
 from __future__ import annotations
 
 from collections.abc import Mapping
+
 import pandas as pd
 
 
 def make_single_target_data(
-    X_A: pd.DataFrame,
-    y_A: pd.DataFrame,
-    X_0: pd.DataFrame,
-    y_0: pd.DataFrame,
+    X_by_hypothesis: Mapping[str, pd.DataFrame],
+    y: pd.DataFrame,
 ) -> dict[str, dict[str, pd.DataFrame]]:
-    """Prepare one dataset per misfit target.
+    """Prepare one complete dataset per target for every hypothesis.
 
-    For each target, rows are retained when that target is present and both
-    hypothesis-A and null-model predictors are complete. The same row mask is
-    applied to all four inputs so the hypotheses remain directly comparable.
+    Parameters
+    ----------
+    X_by_hypothesis
+        Mapping such as ``{"A": X_A, "0": X_0, "A1": X_A1}``.
+        Each DataFrame should contain the same rows and retained metadata
+        such as ``source_year``, ``source``, ``cruise``, and ``name``.
+    y
+        DataFrame containing one column per misfit target. Missing target
+        values are allowed here and filtered separately for each target.
 
-    ``source_year`` is retained in X_A and X_0 for year-based splitting. Drop
-    it only after the train/test split if it should not be a model predictor.
+    Returns
+    -------
+    dict
+        ``results[target]`` contains one ``X_<hypothesis>`` and one
+        ``y_<hypothesis>`` DataFrame for every hypothesis. For example:
+
+        ``results["TA_misfit"]["X_A"]``
+        ``results["TA_misfit"]["y_A"]``
+        ``results["TA_misfit"]["X_A1"]``
+        ``results["TA_misfit"]["y_A1"]``
+
+        The same rows are used for every hypothesis within each target.
     """
-    frames = {"X_A": X_A, "y_A": y_A, "X_0": X_0, "y_0": y_0}
-    lengths = {name: len(frame) for name, frame in frames.items()}
-    if len(set(lengths.values())) != 1:
-        raise ValueError(f"All inputs must have the same length: {lengths}")
+    if not X_by_hypothesis:
+        raise ValueError("X_by_hypothesis is empty")
+    if not isinstance(y, pd.DataFrame) or y.empty:
+        raise ValueError("y must be a non-empty pandas DataFrame")
 
-    if not (
-        X_A.index.equals(y_A.index)
-        and X_A.index.equals(X_0.index)
-        and X_A.index.equals(y_0.index)
-    ):
-        raise ValueError("All inputs must have aligned indexes")
+    hypotheses = list(X_by_hypothesis)
+    frames = list(X_by_hypothesis.values())
+    lengths = {name: len(frame) for name, frame in X_by_hypothesis.items()}
+    if len(set(lengths.values())) != 1 or len(frames[0]) != len(y):
+        raise ValueError(
+            "All hypothesis DataFrames and y must have the same length: "
+            f"{lengths}, y={len(y)}"
+        )
 
-    if not y_A.columns.equals(y_0.columns):
-        raise ValueError("y_A and y_0 must have the same target columns")
+    reference_index = frames[0].index
+    if not y.index.equals(reference_index):
+        raise ValueError("y and hypothesis DataFrames must have aligned indexes")
+    for hypothesis, X in X_by_hypothesis.items():
+        if not X.index.equals(reference_index):
+            raise ValueError(
+                f"X_{hypothesis} is not index-aligned with the other inputs"
+            )
 
     results: dict[str, dict[str, pd.DataFrame]] = {}
 
-    for target in y_A.columns:
-        keep = (
-            y_A[target].notna()
-            & y_0[target].notna()
-            & X_A.notna().all(axis=1)
-            & X_0.notna().all(axis=1)
-        )
+    for target in y.columns:
+        keep = y[target].notna().copy()
+
+        # Require complete predictors for every hypothesis so comparisons
+        # use identical rows and cannot differ because of missing features.
+        for X in frames:
+            keep &= X.notna().all(axis=1)
 
         if not keep.any():
             print(f"{target}: no complete rows; skipped")
             continue
 
-        results[target] = {
-            "X_A": X_A.loc[keep].reset_index(drop=True),
-            "y_A": y_A.loc[keep, [target]].reset_index(drop=True),
-            "X_0": X_0.loc[keep].reset_index(drop=True),
-            "y_0": y_0.loc[keep, [target]].reset_index(drop=True),
-        }
+        target_data: dict[str, pd.DataFrame] = {}
+        y_target = y.loc[keep, [target]].reset_index(drop=True)
+
+        for hypothesis, X in X_by_hypothesis.items():
+            target_data[f"X_{hypothesis}"] = (
+                X.loc[keep].reset_index(drop=True)
+            )
+            target_data[f"y_{hypothesis}"] = y_target.copy()
+
+        results[target] = target_data
         print(f"{target}: {int(keep.sum()):,} complete rows")
 
     if not results:
-        raise ValueError("No target has complete rows for either hypothesis")
+        raise ValueError("No target has complete rows for all hypotheses")
 
+    print("Hypotheses retained:", hypotheses)
     return results
 
 
 if __name__ == "__main__":
     pass
+

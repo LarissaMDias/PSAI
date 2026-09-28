@@ -1,0 +1,2 @@
+target,method,hypothesis,rmse_mean,rmse_std,mae_mean,mae_std,r2_mean,r2_std,n_folds,n_valid_total
+TA_misfit,year,A,39.980341452043604,14.21892066260666,20.042910238584305,2.271423784819323,0.11430575025958292,0.29872748647121317,5,4544

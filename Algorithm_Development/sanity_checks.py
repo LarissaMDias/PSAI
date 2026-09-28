@@ -3,11 +3,25 @@
 """
 Created on Fri Sep 25 13:42:25 2026
 
-Checks sanity of misfit data
+Checks sanity of data.
 
 Functions:
-    sanity_checks(obs, model): sanity checks, returns copies with duplicates 
-    removed, if desired
+    _duplicate_report: Internal function that prints and returns duplicate
+       keys for a DataFrame, as needed.
+       Returns:
+           duplicates: A pandas DataFrame of deduplicated values.
+           variation: A pandas DataFrame of duplicates grouped by keys.
+           
+    sanity_checks(obs, model): Sanity checks, returns copies with duplicates 
+        removed, if desired. Maybe don't use the duplicate function though, 
+        seems wonky. Needs checking.
+        Returns:
+            obs: A pandas DataFrame of observations with duplicates removed.
+            model: A pandas DataFrame of model output with duplicates removed.
+            
+    worked_check(obs, model): A function that double-checked that this worked 
+        and examines some elements of doy conversions to double check those via 
+        printing.
 
 @author: larissadias
 """

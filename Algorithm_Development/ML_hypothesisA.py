@@ -28,14 +28,14 @@ from plot_withhelddata import plot_withhelddata
 from k_fold import make_cv_splits
 from map_k_fold import map_k_fold
 from xgb_single_target_cv import run_xgb_cv
-
-
+from xgb_single_target_cv import summarize_xgb_cv
+from mean_baseline_cv import compare_xgb_to_baseline
 import pandas as pd
 
 # Reading in the misfit data
 obs, model = misfit_readin()
 
-# Checking available variables
+# Checking available variables, hash or unhash as desired
 print(model.columns.tolist())
 print(obs.columns.tolist())
 
@@ -47,7 +47,9 @@ for df in [obs, model]:
     df['time'] = pd.to_datetime(df['time'], utc=True) # Correcting to UTC first
     df['DOY'] = df['time'].dt.dayofyear
     
-df_cast, summary = data_frequency(obs)
+# Finding out what groupings the source data fall under, in case of autonomous 
+# sampling
+#df_cast, summary = data_frequency(obs)
 
 obs, model = sanity_checks(obs, model, key_cols=None, deduplicate=False) 
 
@@ -73,13 +75,25 @@ def decimal_year(t):
 obs['decimal_year'] = decimal_year(obs['time'])
 model['decimal_year'] = obs['decimal_year']
 
+# Convert chlorophyll-a to log(chlorophyll-a) due to high skewedness of data
 obs, model = chla_conversion(obs, model)
 
-# Creating DataFrame for model training and testingm _0 is null 
+# Creating DataFrame for model training and testing _0 is null 
 # hypothesis and _A is test hypothesis
-X_A, y, X_0, _ = model_df_create(obs, model)
+hypotheses = ("A", "0", "A1", "A2", "A3", "01", "02", "03", "04")
 
-results = make_single_target_data(X_A, y, X_0, y)
+X_by_hypothesis, y = model_df_create(
+    obs,
+    model,
+    hypotheses=hypotheses,
+)
+
+# Creating dictionary of results for all possible outputs. Could not make a 
+# multi-predictor model due to missing data
+results = make_single_target_data(
+    X_by_hypothesis,
+    y,
+)
 
 splits = withhold_test_years(
     results,
@@ -107,13 +121,14 @@ cv_splits = make_cv_splits(
     n_splits=5,
 )
 
-# Can map the k-fold splits here
+# Can map the k-fold splits here, as desired
 map_k_fold(
     cv_splits,
     target="TA_misfit",
     method="year",
     fold=1,
-    hypothesis="A",
+    hypothesis="A2",
+    coordinate_hypothesis="A",
 )
 map_k_fold(
     cv_splits,
@@ -144,11 +159,52 @@ map_k_fold(
     hypothesis="A",
 )
 
-fold_results, predictions, models = run_xgb_cv(
+# Creating a list for all results
+all_results = []
+
+for target in ["TA_misfit"]:
+    for method in ["year"]: # cruise, source
+        for hypothesis in hypotheses:
+            fold_results, predictions, models = run_xgb_cv(
+                cv_splits,
+                target=target,
+                method=method,
+                hypothesis=hypothesis,
+                tune=True,
+                n_iter=12,
+            )
+            all_results.append(fold_results)
+
+# Converting to a pandas DataFrame
+combined_results = pd.concat(all_results, ignore_index=True)
+
+# Summary figure and statistics
+summary_df, fig = summarize_xgb_cv(combined_results)
+
+
+hypotheses = ("A", "0", "A1", "A2", "A3", "01", "02", "03", "04")
+
+combined_results, summary_df, comparison = compare_xgb_to_baseline(
     cv_splits,
     target="TA_misfit",
-    method="year",      # "year", "source", or another available method
-    hypothesis="A",       # use "0" for the null hypothesis
+    method="year",
+    hypotheses=hypotheses,
     tune=True,
-    n_iter=20,
+    n_iter=12,
 )
+
+rmse = combined_results.pivot(
+    index="fold",
+    columns="hypothesis",
+    values="rmse",
+)
+
+print(rmse)
+
+for hypothesis in rmse.columns:
+    if hypothesis != "A3":
+        difference = rmse["A3"] - rmse[hypothesis]
+        print(f"\nA3 minus {hypothesis}")
+        print(difference)
+        print("Mean difference:", difference.mean())
+        print("A3 wins:", (difference < 0).sum(), "of", difference.notna().sum())

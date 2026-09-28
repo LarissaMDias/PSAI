@@ -3,11 +3,16 @@
 """
 Created on Fri Sep 25 12:03:47 2026
 
-Reads in pre-calculated model-data misfits (residuals) for processing in 
+Reads in pre-matched model output and observational data for processing in 
 algorithm development scripts.
 
 Functions: 
-    misfit_readin(): reads and combines yearly misfit DataFrames    
+    misfit_readin(): reads and combines yearly misfit DataFrames from within
+        pickled files.
+        
+        Returns: 
+            obs: a pandas DataFrame of observational data.
+            model: a pandas DataFrame of model output.
 
 @author: larissadias
 """
@@ -17,13 +22,14 @@ import pandas as pd
 
 def misfit_readin():
     
-    """Reading, unpickling, and combining all existing model-data misfit files, 
+    """Reading, unpickling, and combining all existing model-data paired files, 
     which consist of pandas DataFrames."""
 
     # misfit_readin.py is in:
     # LiveOcean/Algorithm_Development/
     PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
+    # Location of the data (pickled files)
     archive_dir = (
         PROJECT_ROOT 
         / "Model_Observation_Pairing" 
@@ -31,9 +37,9 @@ def misfit_readin():
     )
 
     # Years to load
-    years = range(2013, 2025)
+    years = range(2013, 2025) # change as needed
 
-    # Empty lists to store yearly dfs
+    # Empty lists to store yearly df's
     obs_list = []
     model_list = []
 

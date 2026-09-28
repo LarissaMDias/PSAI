@@ -14,7 +14,16 @@ import numpy as np
 import pandas as pd
 
 
-_METADATA_COLUMNS = ("source_year", "source", "cruise", "name")
+def _hypothesis_names(data: Mapping[str, Any]) -> list[str]:
+    """Return hypothesis names represented by X_<name>/y_<name> pairs."""
+    names = sorted(
+        key.removeprefix("X_")
+        for key in data
+        if key.startswith("X_") and f"y_{key.removeprefix('X_')}" in data
+    )
+    if not names:
+        raise KeyError("No X_<hypothesis>/y_<hypothesis> pairs found")
+    return names
 
 
 def withhold_test_years(
@@ -23,101 +32,92 @@ def withhold_test_years(
     year_col: str = "source_year",
     step: int = 5,
     remove_year_column: bool = False,
-) -> dict[str, dict[str, pd.DataFrame | np.ndarray]]:
-    """Split every target into synchronized train/test sets by calendar year.
+) -> dict[str, dict[str, Any]]:
+    """Withhold shared calendar years for every target and hypothesis.
 
-    The same sorted calendar years are withheld for every target and for both
-    hypotheses. Metadata remain in X_A and X_0 by default so later grouped or
-    spatial cross-validation can use them. They should be removed only when
-    constructing the final model-predictor matrices.
+    ``results`` should be returned by ``make_single_target_data`` for all
+    hypotheses. For example, ``results[target]`` contains ``X_A``, ``y_A``,
+    ``X_0``, ``y_0``, ``X_A1``, ``y_A1``, and so on.
 
-    With ``step=5`` and years 2013--2024, this selects 2013, 2018, and 2023.
+    The same sorted test years are used for every target and hypothesis.
+    Metadata remain in the returned X DataFrames by default, allowing later
+    year, source, cruise, name, or spatial cross-validation.
     """
     if not results:
         raise ValueError("results is empty")
     if step < 1:
         raise ValueError("step must be at least 1")
 
-    required = {"X_A", "y_A", "X_0", "y_0"}
     all_years: set[int] = set()
+    target_hypotheses: dict[str, list[str]] = {}
 
     for target, data in results.items():
-        missing = required - set(data)
-        if missing:
-            raise KeyError(f"{target} is missing datasets: {sorted(missing)}")
+        names = _hypothesis_names(data)
+        target_hypotheses[target] = names
 
-        X_A, y_A, X_0, y_0 = (data[name] for name in ("X_A", "y_A", "X_0", "y_0"))
-        frames = {"X_A": X_A, "y_A": y_A, "X_0": X_0, "y_0": y_0}
-        lengths = {name: len(frame) for name, frame in frames.items()}
-        if len(set(lengths.values())) != 1:
-            raise ValueError(f"{target}: input lengths differ: {lengths}")
+        for hypothesis in names:
+            X = data[f"X_{hypothesis}"]
+            y = data[f"y_{hypothesis}"]
 
-        if not (
-            X_A.index.equals(y_A.index)
-            and X_A.index.equals(X_0.index)
-            and X_A.index.equals(y_0.index)
-        ):
-            raise ValueError(f"{target}: X and y indexes are not aligned")
-
-        for label, X in (("X_A", X_A), ("X_0", X_0)):
+            if not isinstance(X, pd.DataFrame) or not isinstance(y, pd.DataFrame):
+                raise TypeError(f"{target}/{hypothesis}: X and y must be DataFrames")
+            if len(X) != len(y):
+                raise ValueError(f"{target}/{hypothesis}: X and y lengths differ")
+            if not X.index.equals(y.index):
+                raise ValueError(f"{target}/{hypothesis}: X and y indexes differ")
             if year_col not in X.columns:
-                raise KeyError(f"{target}: {label} is missing {year_col!r}")
+                raise KeyError(
+                    f"{target}/{hypothesis}: missing year column {year_col!r}"
+                )
 
-        years_A = pd.to_numeric(X_A[year_col], errors="coerce")
-        years_0 = pd.to_numeric(X_0[year_col], errors="coerce")
-        if years_A.isna().any() or years_0.isna().any():
-            raise ValueError(f"{target}: year column contains missing/non-numeric values")
-        if not years_A.reset_index(drop=True).equals(years_0.reset_index(drop=True)):
-            raise ValueError(f"{target}: X_A and X_0 years are not aligned")
-
-        all_years.update(years_A.astype(int).unique().tolist())
+            years = pd.to_numeric(X[year_col], errors="coerce")
+            if years.isna().any():
+                raise ValueError(
+                    f"{target}/{hypothesis}: {year_col!r} contains missing/non-numeric values"
+                )
+            all_years.update(years.astype(int).unique().tolist())
 
     test_years = np.asarray(sorted(all_years), dtype=int)[::step]
     test_year_set = set(test_years.tolist())
-    output: dict[str, dict[str, pd.DataFrame | np.ndarray]] = {}
+    output: dict[str, dict[str, Any]] = {}
 
     for target, data in results.items():
-        X_A, y_A, X_0, y_0 = (data[name] for name in ("X_A", "y_A", "X_0", "y_0"))
-        years = pd.to_numeric(X_A[year_col], errors="raise").astype(int)
-        test_mask = years.isin(test_year_set).to_numpy()
+        target_output: dict[str, Any] = {"test_years": test_years.copy()}
 
-        def split_X(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-            train = df.loc[~test_mask].copy()
-            test = df.loc[test_mask].copy()
-            if remove_year_column and year_col in train.columns:
-                train = train.drop(columns=year_col)
-                test = test.drop(columns=year_col)
-            return train.reset_index(drop=True), test.reset_index(drop=True)
+        for hypothesis in target_hypotheses[target]:
+            X = data[f"X_{hypothesis}"]
+            y = data[f"y_{hypothesis}"]
+            years = pd.to_numeric(X[year_col], errors="raise").astype(int)
+            test_mask = years.isin(test_year_set)
 
-        def split_y(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-            return (
-                df.loc[~test_mask].reset_index(drop=True).copy(),
-                df.loc[test_mask].reset_index(drop=True).copy(),
+            X_train = X.loc[~test_mask].copy()
+            X_test = X.loc[test_mask].copy()
+            if remove_year_column:
+                X_train = X_train.drop(columns=year_col)
+                X_test = X_test.drop(columns=year_col)
+
+            target_output[f"X_{hypothesis}_train"] = X_train.reset_index(drop=True)
+            target_output[f"X_{hypothesis}_test"] = X_test.reset_index(drop=True)
+            target_output[f"y_{hypothesis}_train"] = (
+                y.loc[~test_mask].reset_index(drop=True).copy()
+            )
+            target_output[f"y_{hypothesis}_test"] = (
+                y.loc[test_mask].reset_index(drop=True).copy()
             )
 
-        X_A_train, X_A_test = split_X(X_A)
-        X_0_train, X_0_test = split_X(X_0)
-        y_A_train, y_A_test = split_y(y_A)
-        y_0_train, y_0_test = split_y(y_0)
+            print(
+                f"{target} | {hypothesis}: "
+                f"training rows={int((~test_mask).sum()):,}, "
+                f"testing rows={int(test_mask.sum()):,}"
+            )
 
-        train_years = sorted(years[~test_mask].unique().tolist())
-        target_test_years = sorted(years[test_mask].unique().tolist())
-        print(f"{target}: training years = {train_years}")
-        print(f"{target}: testing years = {target_test_years}")
-        print(f"{target}: training rows = {len(X_A_train):,}")
-        print(f"{target}: testing rows = {len(X_A_test):,}")
+        output[target] = target_output
 
-        output[target] = {
-            "X_A_train": X_A_train,
-            "X_A_test": X_A_test,
-            "X_0_train": X_0_train,
-            "X_0_test": X_0_test,
-            "y_A_train": y_A_train,
-            "y_A_test": y_A_test,
-            "y_0_train": y_0_train,
-            "y_0_test": y_0_test,
-            "test_years": test_years.copy(),
-        }
-
+    train_years = sorted(set(all_years) - test_year_set)
+    print(f"Shared training years: {train_years}")
     print(f"Shared test years: {test_years.tolist()}")
     return output
+
+
+if __name__ == "__main__":
+    pass

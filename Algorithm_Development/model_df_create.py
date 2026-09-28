@@ -7,6 +7,8 @@ Created on Fri Sep 25 15:24:30 2026
 """
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
+
 import numpy as np
 import pandas as pd
 
@@ -22,23 +24,91 @@ TARGET_PAIRS = {
     "NH4_misfit": ("NH4 (uM)", "NH4 (uM)"),
 }
 
-
-# These are retained for splitting/grouping but are not model predictors.
+# Retained for CV grouping/splitting, but never model predictors.
 METADATA_COLUMNS = ["source_year", "source", "cruise", "name"]
+
+
+DEFAULT_HYPOTHESES = {
+    "A": [
+        "lat", "lon", "z", "decimal_year", "sin_doy", "cos_doy",
+        "region", "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
+        "NO3 (uM)", "log_Chl", "NH4 (uM)",
+    ],
+    "0": [
+        "lat", "lon", "z", "decimal_year", "sin_doy", "cos_doy",
+        "region",
+    ],
+    # No latitude, longitude, or depth; modeled SA/CT retained.
+    "A1": [
+        "decimal_year", "sin_doy", "cos_doy", "region",
+        "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
+        "NO3 (uM)", "log_Chl", "NH4 (uM)",
+    ],
+    # Biogeochemical predictors only, plus region.
+    "A2": [
+        "region", "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
+        "NO3 (uM)", "log_Chl", "NH4 (uM)",
+    ],
+    # Spatial/depth plus modeled biogeochemistry, without season.
+    "A3": [
+        "lat", "lon", "z", "region", "SA", "CT", "TA (uM)",
+        "DIC (uM)", "DO (uM)", "NO3 (uM)", "log_Chl", "NH4 (uM)",
+    ],
+    "01": ["decimal_year", "sin_doy", "cos_doy", "region"],
+    "02": ["region"],
+    "03": ["lat", "lon", "z", "region"],
+    "04": ["region", "SA", "CT"],
+}
 
 
 def model_df_create(
     obs: pd.DataFrame,
     model: pd.DataFrame,
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Create target-ready hypothesis-A and null-model DataFrames.
+    *,
+    hypotheses: Sequence[str] = ("A", "0"),
+    hypothesis_features: Mapping[str, Sequence[str]] | None = None,
+) -> tuple[dict[str, pd.DataFrame], pd.DataFrame]:
+    """Create hypothesis-specific predictors and all misfit targets.
 
-    X_A and X_0 retain metadata needed for temporal, source, cruise, and
-    station-based splitting. Metadata are not included in the predictor lists.
-    Missing target values are retained so each target can be filtered later.
+    Parameters
+    ----------
+    obs, model
+        Aligned observation and model DataFrames.
+    hypotheses
+        Names from ``DEFAULT_HYPOTHESES`` to create, for example
+        ``("A", "0", "A1", "A2", "A3", "01", "02", "03", "04")``.
+    hypothesis_features
+        Optional custom mapping from hypothesis name to model columns. If
+        supplied, it is merged over ``DEFAULT_HYPOTHESES``.
+
+    Returns
+    -------
+    X_by_hypothesis, y
+        ``X_by_hypothesis["A"]`` contains predictors plus metadata;
+        ``y`` contains one column per misfit target. Missing target values are
+        retained so each target can be filtered separately later.
+
+    Notes
+    -----
+    Metadata remain in each X DataFrame for CV. Drop them immediately before
+    fitting a model.
     """
     if len(obs) != len(model) or not obs.index.equals(model.index):
         raise ValueError("obs and model must have the same aligned index")
+    if not hypotheses:
+        raise ValueError("hypotheses must contain at least one name")
+
+    feature_map = {name: list(columns) for name, columns in DEFAULT_HYPOTHESES.items()}
+    if hypothesis_features is not None:
+        feature_map.update(
+            {name: list(columns) for name, columns in hypothesis_features.items()}
+        )
+
+    unknown = sorted(set(hypotheses) - set(feature_map))
+    if unknown:
+        raise KeyError(
+            f"Unknown hypotheses: {unknown}. Available: {sorted(feature_map)}"
+        )
 
     missing = {
         f"obs: {obs_col}"
@@ -50,29 +120,19 @@ def model_df_create(
         for model_col, obs_col in TARGET_PAIRS.values()
         if model_col not in model.columns
     }
-
-    features_A = [
-        "lat", "lon", "z", "decimal_year", "sin_doy", "cos_doy",
-        "region", "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
-        "NO3 (uM)", "log_Chl", "NH4 (uM)",
-    ]
-    features_0 = [
-        "lat", "lon", "z", "decimal_year", "sin_doy", "cos_doy",
-        "region",
-    ]
-
-    for label, columns in (("hypothesis-A", features_A), ("null", features_0)):
+    for hypothesis in hypotheses:
         missing |= {
-            f"model ({label}): {column}"
-            for column in columns
-            if column not in model.columns
+            f"model ({hypothesis}): {column}"
+            for column in feature_map[hypothesis]
+            if column != "region" and column not in model.columns
         }
-    required_metadata = {"source_year"}
-    missing |= {
-        f"model metadata: {column}"
-        for column in required_metadata
-        if column not in model.columns
+
+    missing_metadata = {
+        f"metadata: {column}"
+        for column in ["source_year"]
+        if column not in obs.columns and column not in model.columns
     }
+    missing |= missing_metadata
     if missing:
         raise KeyError(f"Missing columns: {sorted(missing)}")
 
@@ -84,67 +144,68 @@ def model_df_create(
         index=model.index,
     ).replace([np.inf, -np.inf], np.nan)
 
-    X_A = model[features_A].copy()
-    X_0 = model[features_0].copy()
-    metadata = model[[c for c in METADATA_COLUMNS if c in model.columns]].copy()
+    # Use observation metadata for grouping when available; fall back to model.
+    metadata = pd.DataFrame(index=model.index)
+    for column in METADATA_COLUMNS:
+        source_df = obs if column in obs.columns else model
+        if column in source_df.columns:
+            metadata[column] = source_df[column].to_numpy()
 
-    for X in (X_A, X_0):
+    if "source_year" not in metadata.columns:
+        raise KeyError("Metadata must contain 'source_year'")
+
+    # Prepare a shared region encoding so every hypothesis has identical dummy
+    # columns and comparable rows.
+    region_values = model["region"] if "region" in model.columns else pd.Series(
+        "unknown", index=model.index
+    )
+    region_values = region_values.fillna("unknown").astype(str)
+    region_dummies = pd.get_dummies(region_values, dtype=float)
+
+    X_by_hypothesis: dict[str, pd.DataFrame] = {}
+    complete_masks: list[pd.Series] = []
+
+    for hypothesis in hypotheses:
+        columns = feature_map[hypothesis]
+        X = model[[c for c in columns if c != "region"]].copy()
         X.replace([np.inf, -np.inf], np.nan, inplace=True)
-        X["region"] = X["region"].fillna("unknown").astype(str)
 
-    # Use identical region dummy columns in both hypotheses.
-    regions = pd.concat(
-        [X_A["region"], X_0["region"]],
-        ignore_index=True,
-    )
-    dummies = pd.get_dummies(regions, dtype=float)
-    n_A = len(X_A)
+        if "region" in columns:
+            X = pd.concat([X.reset_index(drop=True), region_dummies.reset_index(drop=True)], axis=1)
+        else:
+            X = X.reset_index(drop=True)
 
-    X_A = pd.concat(
-        [
-            X_A.drop(columns="region").reset_index(drop=True),
-            dummies.iloc[:n_A].reset_index(drop=True),
-        ],
-        axis=1,
-    )
-    X_0 = pd.concat(
-        [
-            X_0.drop(columns="region").reset_index(drop=True),
-            dummies.iloc[n_A:].reset_index(drop=True),
-        ],
-        axis=1,
-    )
+        complete_masks.append(X.notna().all(axis=1))
+        X_by_hypothesis[hypothesis] = X
 
-    # Align all objects positionally before applying the shared predictor mask.
-    X_A = X_A.reset_index(drop=True)
-    X_0 = X_0.reset_index(drop=True)
     metadata = metadata.reset_index(drop=True)
     y = y.reset_index(drop=True)
+    metadata_complete = metadata["source_year"].notna()
 
-    predictor_complete = (
-        X_A.notna().all(axis=1)
-        & X_0.notna().all(axis=1)
-        & metadata["source_year"].notna()
-    )
+    # Use a shared predictor/metadata mask so all hypotheses compare identical
+    # observations. Target NaNs are intentionally retained for later
+    # single-target filtering.
+    keep = metadata_complete.copy()
+    for mask in complete_masks:
+        keep &= mask
 
-    X_A = pd.concat(
-        [X_A.loc[predictor_complete].reset_index(drop=True),
-         metadata.loc[predictor_complete].reset_index(drop=True)],
-        axis=1,
-    )
-    X_0 = pd.concat(
-        [X_0.loc[predictor_complete].reset_index(drop=True),
-         metadata.loc[predictor_complete].reset_index(drop=True)],
-        axis=1,
-    )
-    y = y.loc[predictor_complete].reset_index(drop=True)
-
-    if X_A.empty:
+    if not keep.any():
         raise ValueError("No rows remain after predictor/metadata filtering")
 
-    print(f"Rows with complete predictors retained: {len(X_A):,}")
+    for hypothesis in hypotheses:
+        X_by_hypothesis[hypothesis] = pd.concat(
+            [
+                X_by_hypothesis[hypothesis].loc[keep].reset_index(drop=True),
+                metadata.loc[keep].reset_index(drop=True),
+            ],
+            axis=1,
+        )
+
+    y = y.loc[keep].reset_index(drop=True)
+
+    print(f"Rows with complete predictors retained: {len(y):,}")
     print("Available target values:")
     print(y.notna().sum())
     print("Retained metadata columns:", list(metadata.columns))
 
-    return X_A, y.copy(), X_0, y.copy()
+    return X_by_hypothesis, y

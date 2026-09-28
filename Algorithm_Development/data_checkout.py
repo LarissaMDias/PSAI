@@ -7,9 +7,15 @@ Checking out the misfit data in various ways
 
 Functions:
     source_check(obs, model): identifies source, date range, sample count, and 
-    variable information
+        variable information. Prints a list of observation and model sources, 
+        sample count, date range, and variables.
     
-    data_frequency(obs, model): checks for frequency aligned with moored data
+    data_frequency(obs): checks for frequency of data collection to help 
+        identify moored or autonomous data. Plots data by source and prints a 
+        summary of median, max, min grouped by source. 
+        Returns:
+            df_cast: A pandas DataFrame grouped by cast and time.
+            summary: A pandas DataFrame grouped by source.
 
 @author: larissadias
 """
@@ -71,6 +77,7 @@ def source_check(obs, model):
 
 def data_frequency(obs):
     """Summarize observation sampling intervals and plot sampling regimes."""
+    
     required = {"source", "name", "time", "lon", "lat"}
     missing = required - set(obs.columns)
     if missing:
