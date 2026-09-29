@@ -213,6 +213,9 @@ for hypothesis in rmse.columns:
     # TA: 
 from ml_calibration import calibrate_predictions
 
+# FIRST insert hyperparameter tuning here for the selected model 
+# Then recheck hypotheses from prior step
+# THEN calibrate
 # XGBoost
 plot_df_xgb, stats_xgb, fig_xgb, ax_xgb = calibrate_predictions(
     combined_results,
@@ -223,7 +226,7 @@ plot_df_xgb, stats_xgb, fig_xgb, ax_xgb = calibrate_predictions(
     ylabel="Observed TA misfit",
     title="XGBoost TA-misfit calibration",
 )
-        
+# Then refit on all development data
 # %% Testing nn models
 from nn_single_target_cv import run_mlp_cv, summarize_mlp_cv
 from compare_mlp_to_baseline import compare_mlp_to_baseline
@@ -294,7 +297,9 @@ for hypothesis in rmse_mlp.columns:
             int(difference.notna().sum()),
         )
 # %%
-        
+  # FIRST insert hyperparameter tuning here for the selected model 
+  # Then recheck hypotheses from prior step
+  # THEN calibrate      
 # Neural network
 plot_df_nn, stats_nn, fig_nn, ax_nn = calibrate_predictions(
     combined_mlp_results,
@@ -305,3 +310,4 @@ plot_df_nn, stats_nn, fig_nn, ax_nn = calibrate_predictions(
     ylabel="Observed TA misfit",
     title="Neural-network TA-misfit calibration",
 )
+# Then final development model
