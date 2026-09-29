@@ -13,6 +13,14 @@ Initial machine learning training, testing the following hypothesis:
 #==========================PART 1=================================#
 # Reading in the data and pre-processing
 #=================================================================#
+
+from pathlib import Path
+import sys
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+    
 from misfit_readin import misfit_readin
 from data_checkout import source_check
 from data_checkout import data_frequency
