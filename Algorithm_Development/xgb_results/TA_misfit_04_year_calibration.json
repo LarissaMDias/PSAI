@@ -1,0 +1,10 @@
+{
+  "target": "TA_misfit",
+  "method": "year",
+  "hypothesis": "04",
+  "calibration_intercept": 13.212065472174453,
+  "calibration_slope": 0.35171750791480905,
+  "rmse": 39.209275088709894,
+  "mae": 21.006983738197448,
+  "r2": 0.3079470768710051
+}

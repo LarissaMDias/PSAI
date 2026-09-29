@@ -68,6 +68,7 @@ from make_single_target_data import make_single_target_data
 from plot_withhelddata import plot_withhelddata
 from k_fold import make_cv_splits
 from map_k_fold import map_k_fold
+from plot_misfits import plot_misfits
 import pandas as pd
 from contextlib import contextmanager
 from time import perf_counter
@@ -141,6 +142,58 @@ with timed_part("PART 1: data preparation"):
         hypotheses=hypotheses,
     )
 
+    misfit_summary, fig = plot_misfits(
+        y,
+        output_dir="xgb_results",
+    )
+    
+    # Some quick diagnostics
+    targets = y.columns
+
+    diagnostics = pd.DataFrame({
+        "n": y[targets].notna().sum(),
+        "mean": y[targets].mean(),
+        "median": y[targets].median(),
+        "std": y[targets].std(),
+        "q01": y[targets].quantile(0.01),
+        "q05": y[targets].quantile(0.05),
+        "q95": y[targets].quantile(0.95),
+        "q99": y[targets].quantile(0.99),
+        "min": y[targets].min(),
+        "max": y[targets].max(),
+        "abs_max": y[targets].abs().max(),
+    })
+
+    print(diagnostics)
+    
+    # Largest misfits
+    for target in ["TA_misfit", "DIC_misfit", "NO3_misfit", "NH4_misfit"]:
+        print(f"\nLargest absolute {target} values:")
+        print(
+            y[target]
+            .abs()
+            .sort_values(ascending=False)
+            .head(10)
+        )
+    # Locations and original values 
+    target = "TA_misfit"
+
+    idx = y[target].abs().nlargest(10).index
+
+    check = pd.DataFrame({
+        "lon": model.loc[idx, "lon"],
+        "lat": model.loc[idx, "lat"],
+        "z": model.loc[idx, "z"],
+        "time": model.loc[idx, "time"],
+        "model": model.loc[idx, "TA (uM)"],
+        "observed": obs.loc[idx, "TA (uM)"],
+        "misfit": y.loc[idx, target],
+        "source": obs.loc[idx, "source"],
+        "cruise": obs.loc[idx, "cruise"],
+    })
+
+    print(check)
+    
     # Creating dictionary of results for all possible outputs. Could not make a 
     # multi-predictor model due to missing data
     results = make_single_target_data(
@@ -277,7 +330,7 @@ with timed_part("PART 2: XGBoost model comparison"):
 #    RMSE = 39.2093
 #    MAE = 21.007
 #    R² = 0.307947
-#    Calibration equation: observed = 2.75232 + 0.889552 * predicted
+#    Calibration equation: predicted = 13.2121 + 0.351718 * observed
 
 from xgb_single_target_cv import run_xgb_cv
 from sklearn.metrics import mean_squared_error

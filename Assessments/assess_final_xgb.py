@@ -24,6 +24,7 @@ if str(ALGORITHM_DIR) not in sys.path:
     sys.path.insert(0, str(ALGORITHM_DIR))
 
 from chla_conversion import chla_conversion
+from leap_year_check import leap_year_check
 from misfit_readin import misfit_readin
 from model_df_create import model_df_create
 from make_single_target_data import make_single_target_data
@@ -37,7 +38,8 @@ RESULTS_DIR = ALGORITHM_DIR / "xgb_results"
 OUTPUT_DIR = ASSESSMENTS_DIR / "assessment_results"
 MODEL_PATH = RESULTS_DIR / f"{TARGET}_{HYPOTHESIS}_year_final_model.joblib"
 CALIBRATION_PATH = RESULTS_DIR / f"{TARGET}_{HYPOTHESIS}_year_calibration.json"
-METADATA = {"source_year", "source", "cruise", "name"}
+ROW_ID = "assessment_row_id"
+METADATA = {"source_year", "source", "cruise", "name", ROW_ID}
 
 
 def drop_metadata(X: pd.DataFrame) -> pd.DataFrame:
@@ -57,7 +59,7 @@ def decimal_year(t: pd.Series) -> pd.Series:
     return year + (t - start) / (end - start)
 
 
-def report_metrics(observed: np.ndarray, predicted: np.ndarray) -> dict[str, float]:
+def metrics(observed: np.ndarray, predicted: np.ndarray) -> dict[str, float]:
     return {
         "rmse": float(np.sqrt(mean_squared_error(observed, predicted))),
         "mae": float(mean_absolute_error(observed, predicted)),
@@ -75,11 +77,18 @@ def main() -> None:
     calibration = json.loads(CALIBRATION_PATH.read_text())
 
     obs, model_data = misfit_readin()
+    if len(obs) != len(model_data):
+        raise ValueError("obs and model_data have different lengths")
+
+    # IDs let us recover the original TA values after model_df_create filters rows.
+    obs[ROW_ID] = np.arange(len(obs), dtype=int)
+    model_data[ROW_ID] = np.arange(len(model_data), dtype=int)
+
     for frame in (obs, model_data):
         frame["time"] = pd.to_datetime(frame["time"], utc=True)
         frame["DOY"] = frame["time"].dt.dayofyear
 
-    # These preprocessing steps must match the training script exactly.
+    obs, model_data, _ = leap_year_check(obs, model_data)
     obs, model_data = subregion_creation(obs, model_data)
     obs["decimal_year"] = decimal_year(obs["time"])
     model_data["decimal_year"] = decimal_year(model_data["time"])
@@ -94,9 +103,22 @@ def main() -> None:
     X_test_raw = data[f"X_{HYPOTHESIS}_test"]
     y_test = data[f"y_{HYPOTHESIS}_test"].iloc[:, 0]
     keep = y_test.notna().to_numpy()
-    X_test = drop_metadata(X_test_raw.loc[keep])
-    observed = y_test.loc[keep].to_numpy(dtype=float)
+    X_test_raw = X_test_raw.loc[keep].reset_index(drop=True)
+    observed_misfit = y_test.loc[keep].to_numpy(dtype=float)
 
+    if ROW_ID not in X_test_raw.columns:
+        raise KeyError(
+            f"{ROW_ID!r} is missing from X_test. Add it to the metadata columns "
+            "retained by model_df_create_with_metadata.py."
+        )
+
+    row_ids = X_test_raw[ROW_ID].to_numpy(dtype=int)
+    obs_by_id = obs.set_index(ROW_ID)
+    model_by_id = model_data.set_index(ROW_ID)
+    observed_ta = obs_by_id.loc[row_ids, "TA (uM)"].to_numpy(dtype=float)
+    model_original_ta = model_by_id.loc[row_ids, "TA (uM)"].to_numpy(dtype=float)
+
+    X_test = drop_metadata(X_test_raw)
     expected = list(getattr(final_model, "feature_names_in_", X_test.columns))
     missing = sorted(set(expected) - set(X_test.columns))
     extra = sorted(set(X_test.columns) - set(expected))
@@ -110,30 +132,49 @@ def main() -> None:
         + float(calibration["calibration_slope"]) * predicted
     )
 
-    raw_metrics = report_metrics(observed, predicted)
-    calibrated_metrics = report_metrics(observed, calibrated)
-    print("Raw prediction:", raw_metrics)
-    print("Calibrated prediction:", calibrated_metrics)
+    print("Raw misfit metrics:", metrics(observed_misfit, predicted))
+    print("Calibrated misfit metrics:", metrics(observed_misfit, calibrated))
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     prefix = f"{TARGET}_{HYPOTHESIS}_withheld_years"
-    pd.DataFrame({
-        "observed": observed,
+    output = pd.DataFrame({
+        "observed": observed_misfit,
         "predicted": predicted,
         "predicted_calibrated": calibrated,
-    }).to_csv(OUTPUT_DIR / f"{prefix}_predictions.csv", index=False)
-
-    report = {
-        "target": TARGET,
-        "hypothesis": HYPOTHESIS,
-        "test_years": [int(x) for x in data["test_years"]],
-        "n_test": int(len(observed)),
-        "raw": raw_metrics,
-        "calibrated": calibrated_metrics,
-    }
-    (OUTPUT_DIR / f"{prefix}_metrics.json").write_text(json.dumps(report, indent=2))
-    print(f"Saved results to {OUTPUT_DIR}")
+        "observed_value": observed_ta,
+        "model_original": model_original_ta,
+        "assessment_row_id": row_ids,
+    })
+    output.to_csv(OUTPUT_DIR / f"{prefix}_predictions.csv", index=False)
+    print(f"Saved predictions: {OUTPUT_DIR / f'{prefix}_predictions.csv'}")
 
 
 if __name__ == "__main__":
     main()
+
+# %% Make plots
+
+from assessment_figures import plot_test_assessment
+from assessment_figures import plot_adjusted_assessment
+from pathlib import Path
+
+df, stats, fig, ax = plot_test_assessment(
+    "assessment_results/TA_misfit_04_withheld_years_predictions.csv",
+    target="TA_misfit",
+    hypothesis="04",
+    output_path="assessment_results/TA_misfit_04_test_predictions.png",
+)
+
+ASSESSMENTS_DIR = Path(__file__).resolve().parent
+RESULTS_DIR = ASSESSMENTS_DIR / "assessment_results"
+
+predictions_csv = RESULTS_DIR / "TA_misfit_04_withheld_years_predictions.csv"
+figure_path = RESULTS_DIR / "TA_misfit_04_original_adjusted_test.png"
+
+plot_adjusted_assessment(
+    predictions_csv=predictions_csv,
+    output_path=figure_path,
+    adjusted_column="predicted_calibrated",
+    residual_convention="model_minus_observation",
+    show=True,
+)

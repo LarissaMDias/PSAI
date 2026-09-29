@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Sep 28 16:44:55 2026
-
-@author: lara
-"""
-
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -24,44 +18,20 @@ def calibrate_predictions(
     method: str | None = None,
     hypothesis: str | None = None,
     label: str | None = None,
-    xlabel: str = "Predicted misfit",
-    ylabel: str = "Observed misfit",
+    xlabel: str = "Observed misfit",
+    ylabel: str = "Predicted misfit",
     title: str | None = None,
     padding: float = 0.05,
     show_plot: bool = True,
 ) -> tuple[pd.DataFrame, dict[str, Any], plt.Figure, plt.Axes]:
-    """Plot observed versus out-of-fold predictions and fit a calibration line.
+    """Plot observed values on x and predictions on y, with calibration.
 
     The calibration equation is::
 
-        observed = intercept + slope * predicted
+        predicted = intercept + slope * observed
 
-    Parameters
-    ----------
-    predictions
-        DataFrame returned by ``run_xgb_cv``. It must contain ``observed``,
-        ``predicted``, and preferably ``target``, ``method``, ``hypothesis``,
-        and ``fold`` columns.
-    target, method, hypothesis
-        Optional filters used to select one result from a combined prediction
-        DataFrame.
-    label
-        Optional label used in the title and printed output.
-    padding
-        Fractional padding added around the observed/predicted range.
-    show_plot
-        If True, display the figure.
-
-    Returns
-    -------
-    plot_df, stats, fig, ax
-        Filtered predictions, calibration/performance statistics, and figure.
-
-    Notes
-    -----
-    The calibration line is descriptive when fitted to the same out-of-fold
-    predictions used for evaluation. For an unbiased calibration assessment,
-    estimate calibration parameters on separate data or nested folds.
+    ``predictions`` must contain ``observed`` and ``predicted`` columns and may
+    also contain ``target``, ``method``, ``hypothesis``, and ``fold`` columns.
     """
     required = {"observed", "predicted"}
     missing = required - set(predictions.columns)
@@ -71,12 +41,11 @@ def calibrate_predictions(
         raise ValueError("padding must be nonnegative")
 
     plot_df = predictions.copy()
-    filters = {
+    for column, value in {
         "target": target,
         "method": method,
         "hypothesis": hypothesis,
-    }
-    for column, value in filters.items():
+    }.items():
         if value is not None:
             if column not in plot_df.columns:
                 raise KeyError(f"predictions is missing filter column {column!r}")
@@ -84,18 +53,17 @@ def calibrate_predictions(
 
     plot_df = plot_df.replace([np.inf, -np.inf], np.nan)
     plot_df = plot_df.dropna(subset=["observed", "predicted"]).copy()
-    if plot_df.empty:
-        raise ValueError("No finite predictions remain after filtering")
     if len(plot_df) < 2:
-        raise ValueError("At least two predictions are required")
-    if plot_df["predicted"].nunique() < 2:
-        raise ValueError("Predicted values must contain at least two unique values")
+        raise ValueError("At least two finite predictions are required")
+    if plot_df["observed"].nunique() < 2:
+        raise ValueError("Observed values must contain at least two unique values")
 
     observed = plot_df["observed"].to_numpy(dtype=float)
     predicted = plot_df["predicted"].to_numpy(dtype=float)
 
-    slope, intercept = np.polyfit(predicted, observed, 1)
-    calibrated = intercept + slope * predicted
+    # Descriptive calibration: predicted = intercept + slope * observed.
+    slope, intercept = np.polyfit(observed, predicted, 1)
+    calibrated = intercept + slope * observed
 
     stats = {
         "n": len(plot_df),
@@ -104,22 +72,21 @@ def calibrate_predictions(
         "r2": float(r2_score(observed, predicted)),
         "calibration_intercept": float(intercept),
         "calibration_slope": float(slope),
-        "calibration_r2": float(r2_score(observed, calibrated)),
+        "calibration_r2": float(r2_score(predicted, calibrated)),
     }
 
     lo = float(min(observed.min(), predicted.min()))
     hi = float(max(observed.max(), predicted.max()))
     span = hi - lo if hi > lo else 1.0
-    pad = padding * span
-    line_min, line_max = lo - pad, hi + pad
+    line_min, line_max = lo - padding * span, hi + padding * span
     line_x = np.linspace(line_min, line_max, 200)
     line_y = intercept + slope * line_x
 
     fig, ax = plt.subplots(figsize=(7, 7))
     if "fold" in plot_df.columns:
         scatter = ax.scatter(
-            predicted,
             observed,
+            predicted,
             c=plot_df["fold"],
             cmap="tab10",
             s=32,
@@ -132,8 +99,8 @@ def calibrate_predictions(
         cbar.set_label("Validation fold")
     else:
         ax.scatter(
-            predicted,
             observed,
+            predicted,
             color="#377eb8",
             s=32,
             alpha=0.75,
@@ -168,14 +135,17 @@ def calibrate_predictions(
     plot_label = label or " | ".join(
         str(value) for value in (target, method, hypothesis) if value is not None
     )
-    ax.set_title(f"Prediction calibration\n{plot_label}" if plot_label else "Prediction calibration")
+    ax.set_title(
+        title
+        or (f"Prediction calibration\n{plot_label}" if plot_label else "Prediction calibration")
+    )
 
     stats_text = (
         f"n = {stats['n']:,}\n"
         f"RMSE = {stats['rmse']:.3g}\n"
         f"MAE = {stats['mae']:.3g}\n"
         f"R² = {stats['r2']:.3f}\n"
-        f"Observed = {intercept:.3g} + {slope:.3f} × predicted\n"
+        f"Predicted = {intercept:.3g} + {slope:.3f} × observed\n"
         f"Calibration R² = {stats['calibration_r2']:.3f}"
     )
     ax.text(
@@ -197,7 +167,7 @@ def calibrate_predictions(
     print(f"R² = {stats['r2']:.6f}")
     print(
         "Calibration equation: "
-        f"observed = {intercept:.6g} + {slope:.6g} * predicted"
+        f"predicted = {intercept:.6g} + {slope:.6g} * observed"
     )
 
     if show_plot:

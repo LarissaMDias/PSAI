@@ -25,8 +25,13 @@ TARGET_PAIRS = {
 }
 
 # Retained for CV grouping/splitting, but never model predictors.
-METADATA_COLUMNS = ["source_year", "source", "cruise", "name"]
-
+METADATA_COLUMNS = [
+    "source_year",
+    "source",
+    "cruise",
+    "name",
+    "assessment_row_id",
+]
 
 DEFAULT_HYPOTHESES = {
     "A": [
