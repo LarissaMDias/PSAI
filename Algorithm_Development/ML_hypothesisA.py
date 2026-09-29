@@ -27,9 +27,6 @@ from make_single_target_data import make_single_target_data
 from plot_withhelddata import plot_withhelddata
 from k_fold import make_cv_splits
 from map_k_fold import map_k_fold
-from xgb_single_target_cv import run_xgb_cv
-from xgb_single_target_cv import summarize_xgb_cv
-from mean_baseline_cv import compare_xgb_to_baseline
 import pandas as pd
 
 # Reading in the misfit data
@@ -158,6 +155,10 @@ map_k_fold(
     fold=5,
     hypothesis="A",
 )
+# %% Testng xgb models
+from xgb_single_target_cv import run_xgb_cv
+from xgb_single_target_cv import summarize_xgb_cv
+from mean_baseline_cv import compare_xgb_to_baseline
 
 # Creating a list for all results
 all_results = []
@@ -208,3 +209,99 @@ for hypothesis in rmse.columns:
         print(difference)
         print("Mean difference:", difference.mean())
         print("A3 wins:", (difference < 0).sum(), "of", difference.notna().sum())
+# %% XGB model selection:
+    # TA: 
+from ml_calibration import calibrate_predictions
+
+# XGBoost
+plot_df_xgb, stats_xgb, fig_xgb, ax_xgb = calibrate_predictions(
+    combined_results,
+    target="TA_misfit",
+    method="year",
+    hypothesis="A3",
+    xlabel="Predicted TA misfit",
+    ylabel="Observed TA misfit",
+    title="XGBoost TA-misfit calibration",
+)
+        
+# %% Testing nn models
+from nn_single_target_cv import run_mlp_cv, summarize_mlp_cv
+from compare_mlp_to_baseline import compare_mlp_to_baseline
+
+all_results = []
+
+for hypothesis in ("A", "0", "A1", "A2", "A3", "01", "02", "03", "04"):
+    fold_results, predictions, models = run_mlp_cv(
+        cv_splits,
+        target="TA_misfit",
+        method="year",
+        hypothesis=hypothesis,
+        tune=True,
+        n_iter=12,
+    )
+    all_results.append(fold_results)
+
+combined_mlp_results = pd.concat(all_results, ignore_index=True)
+summary_df, fig = summarize_mlp_cv(combined_mlp_results)
+
+
+hypotheses = ("A", "0", "A1", "A2", "A3", "01", "02", "03", "04")
+
+combined_mlp_results, mlp_summary, mlp_comparison = (
+    compare_mlp_to_baseline(
+        cv_splits,
+        target="TA_misfit",
+        method="year",
+        hypotheses=hypotheses,
+        tune=True,
+        n_iter=12,
+    )
+)
+
+print(mlp_summary)
+print(mlp_comparison)
+
+a3_minus_baseline = (
+    mlp_comparison["A3"] - mlp_comparison["mean_baseline"]
+)
+
+print(a3_minus_baseline)
+print("Mean difference:", a3_minus_baseline.mean())
+print("A3 wins:", (a3_minus_baseline < 0).sum())
+
+rmse_mlp = combined_mlp_results.pivot(
+    index="fold",
+    columns="hypothesis",
+    values="rmse",
+)
+
+print(rmse_mlp)
+
+if "A3" not in rmse_mlp.columns:
+    raise KeyError("A3 results are not present")
+
+for hypothesis in rmse_mlp.columns:
+    if hypothesis != "A3":
+        difference = rmse_mlp["A3"] - rmse_mlp[hypothesis]
+
+        print(f"\nA3 minus {hypothesis}")
+        print(difference)
+        print("Mean difference:", difference.mean())
+        print(
+            "A3 wins:",
+            int((difference < 0).sum()),
+            "of",
+            int(difference.notna().sum()),
+        )
+# %%
+        
+# Neural network
+plot_df_nn, stats_nn, fig_nn, ax_nn = calibrate_predictions(
+    combined_mlp_results,
+    target="TA_misfit",
+    method="year",
+    hypothesis="A3",
+    xlabel="Predicted TA misfit",
+    ylabel="Observed TA misfit",
+    title="Neural-network TA-misfit calibration",
+)
