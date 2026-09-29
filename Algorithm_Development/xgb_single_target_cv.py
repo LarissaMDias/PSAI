@@ -11,6 +11,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
+import re
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -209,6 +210,9 @@ def run_xgb_cv(
         models,
     )
 
+def _safe_filename(value: str) -> str:
+    """Make a dataframe label safe for use in a filename."""
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", str(value)).strip("_")
 
 def summarize_xgb_cv(
     fold_results: pd.DataFrame,
@@ -278,12 +282,29 @@ def summarize_xgb_cv(
     if output_dir is not None:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        summary.to_csv(output_dir / "xgb_cv_summary.csv", index=False)
-        fold_results.to_csv(output_dir / "xgb_cv_fold_results.csv", index=False)
-        fig.savefig(output_dir / "xgb_cv_rmse_summary.png", dpi=300, bbox_inches="tight")
+
+        targets = sorted(summary["target"].dropna().astype(str).unique())
+        methods = sorted(summary["method"].dropna().astype(str).unique())
+        hypotheses = sorted(summary["hypothesis"].dropna().astype(str).unique())
+
+        label_parts = [
+            *(targets if len(targets) == 1 else ["combined"]),
+            *(methods if len(methods) == 1 else ["multiple_methods"]),
+            *(hypotheses if len(hypotheses) == 1 else ["multiple_hypotheses"]),
+        ]
+        prefix = "xgb_cv_" + "_".join(_safe_filename(part) for part in label_parts)
+
+        summary.to_csv(output_dir / f"{prefix}_summary.csv", index=False)
+        fold_results.to_csv(output_dir / f"{prefix}_fold_results.csv", index=False)
+        fig.savefig(
+            output_dir / f"{prefix}_rmse_summary.png",
+            dpi=300,
+            bbox_inches="tight",
+        )
 
     if show_plot:
         plt.show()
+        
     return summary, fig
 
 

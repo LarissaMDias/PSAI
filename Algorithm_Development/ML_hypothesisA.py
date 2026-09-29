@@ -10,7 +10,9 @@ Initial machine learning training, testing the following hypothesis:
     
 @author: larissadias
 """
-
+#==========================PART 1=================================#
+# Reading in the data and pre-processing
+#=================================================================#
 from misfit_readin import misfit_readin
 from data_checkout import source_check
 from data_checkout import data_frequency
@@ -155,7 +157,8 @@ map_k_fold(
     fold=5,
     hypothesis="A",
 )
-# %% Testng xgb models
+# %% 
+#=========================PART 2=========Testng xgb models
 from xgb_single_target_cv import run_xgb_cv
 from xgb_single_target_cv import summarize_xgb_cv
 from mean_baseline_cv import compare_xgb_to_baseline
