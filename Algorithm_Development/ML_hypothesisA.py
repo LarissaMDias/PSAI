@@ -8,32 +8,32 @@ Initial machine learning training, testing the following hypothesis:
     is provided simulated fields for the biogeochemical parameter being 
     predicted.
     
-    DEFAULT_HYPOTHESES = {
-        "A": [
+    DEFAULT_HYPOTHESES
+        "A":
             "lat", "lon", "z", "decimal_year", "sin_doy", "cos_doy",
             "region", "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
-            "NO3 (uM)", "log_Chl", "NH4 (uM)",
-        ],
-        "0": [
+            "NO3 (uM)", "log_Chl", "NH4 (uM)"
+        
+        "0": 
             "lat", "lon", "z", "decimal_year", "sin_doy", "cos_doy",
-            "region",
-        ],
+            "region"
+        
         # No latitude, longitude, or depth; modeled SA/CT retained.
-        "A1": [
+        "A1": 
             "decimal_year", "sin_doy", "cos_doy", "region",
             "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
             "NO3 (uM)", "log_Chl", "NH4 (uM)",
-        ],
+        
         # Biogeochemical predictors only, plus region.
-        "A2": [
+        "A2": 
             "region", "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
             "NO3 (uM)", "log_Chl", "NH4 (uM)",
-        ],
+        
         # Spatial/depth plus modeled biogeochemistry, without season.
-        "A3": [
+        "A3": 
             "lat", "lon", "z", "region", "SA", "CT", "TA (uM)",
             "DIC (uM)", "DO (uM)", "NO3 (uM)", "log_Chl", "NH4 (uM)",
-        ],
+        
         "01": ["decimal_year", "sin_doy", "cos_doy", "region"],
         "02": ["region"],
         "03": ["lat", "lon", "z", "region"],
@@ -72,7 +72,6 @@ import pandas as pd
 from contextlib import contextmanager
 from time import perf_counter
 
-
 @contextmanager
 def timed_part(name: str):
     start = perf_counter()
@@ -85,7 +84,6 @@ def timed_part(name: str):
         print(f"FINISHED {name} in {elapsed / 60:.2f} minutes")
 
 with timed_part("PART 1: data preparation"):
-    obs, model = misfit_readin()
     
     # Reading in the misfit data
     obs, model = misfit_readin()
@@ -127,8 +125,8 @@ with timed_part("PART 1: data preparation"):
         end = pd.to_datetime((year + 1).astype(str) + '-01-01', utc=True)
         return year + (t - start) / (end - start)
 
-    obs['decimal_year'] = decimal_year(model['time'])
-    model['decimal_year'] = obs['decimal_year']
+    obs["decimal_year"] = decimal_year(obs["time"])
+    model["decimal_year"] = decimal_year(model["time"])
 
     # Convert chlorophyll-a to log(chlorophyll-a) due to high skewedness of data
     obs, model = chla_conversion(obs, model)
@@ -241,7 +239,7 @@ with timed_part("PART 2: XGBoost model comparison"):
 
     print(rmse)
 
-    selected_hypothesis = "A3"
+    selected_hypothesis = "04"
 
     if selected_hypothesis in rmse.columns:
         for hypothesis in rmse.columns:
@@ -266,13 +264,26 @@ with timed_part("PART 2: XGBoost model comparison"):
 # Notes on which model was selected for each:
 # 1. TA_misfit selected model
 #    Algorithm: XGBoost
-#    Hypothesis: 
+#    Hypothesis: 04 -> region, SA, CT
 #    CV method: year-grouped five-fold CV
 #    Tuning: randomized search, 12 iterations per outer fold
-#    Reason: lowest mean RMSE; improvement over alternatives modest
+#    Reason: comparative mean RMSE, MAE, and R2 to A3; simplest model with low
+#        metrics
+#    Final parameters:
+#        'subsample': 0.7, 'reg_lambda': 10.0, 'n_estimators': 200, 
+#        'min_child_weight': 3, 'max_depth': 3, 'learning_rate': 0.02, 
+#        'colsample_bytree': 0.7
+#    n = 4,544
+#    RMSE = 39.2093
+#    MAE = 21.007
+#    R² = 0.307947
+#    Calibration equation: observed = 2.75232 + 0.889552 * predicted
 
 from xgb_single_target_cv import run_xgb_cv
 from sklearn.metrics import mean_squared_error
+
+output_dir = Path("xgb_results")
+output_dir.mkdir(parents=True, exist_ok=True)
 
 with timed_part("PART 3: selected-model tuned CV"):
     selected_fold_results, selected_predictions, selected_models = run_xgb_cv(
@@ -285,9 +296,13 @@ with timed_part("PART 3: selected-model tuned CV"):
     )
 
     print(selected_fold_results.to_string(index=False))
-    
+
+    prefix = (
+        f"TA_misfit_year_{selected_hypothesis}"
+    )
+
     selected_fold_results.to_csv(
-        "xgb_results/TA_misfit_year_A3_tuned_fold_results.csv",
+        output_dir / f"{prefix}_tuned_fold_results.csv",
         index=False,
     )
 
@@ -295,57 +310,55 @@ with timed_part("PART 3: selected-model tuned CV"):
         ["fold", "best_params", "rmse", "mae", "r2"]
     ]
 
-    print(selected_params.to_string(index=False))
-    
-    params_expanded = selected_fold_results["best_params"].apply(pd.Series)
+    params_expanded = selected_params["best_params"].apply(pd.Series)
     params_expanded.insert(
         0,
         "fold",
-        selected_fold_results["fold"].to_numpy(),
+        selected_params["fold"].to_numpy(),
     )
 
     params_expanded.to_csv(
-        "xgb_results/TA_misfit_year_A3_tuned_parameters.csv",
+        output_dir / f"{prefix}_tuned_parameters.csv",
         index=False,
     )
-    
-    # If combined_predictions contains predictions for each hypothesis:
-    for hypothesis in ["A3", "04", "02", "mean_baseline"]:
-        subset = combined_predictions[
-            combined_predictions["hypothesis"].eq(hypothesis)
-        ]
 
-        pooled_rmse = np.sqrt(
-            mean_squared_error(
-                subset["observed"],
-                subset["predicted"],
-            )
-        )
-
-    print(hypothesis, pooled_rmse)
-# %%
+    print(params_expanded.to_string(index=False))
+    # %%
 #==========================PART 4=================================#
 # Final model development
 #=================================================================#
-from final_xgb_training import fit_final_xgb
+from fit_final_xgb import fit_final_xgb
 import joblib
 from pathlib import Path
 import json
 
-with timed_part("PART 4: final development model"):
+with timed_part("PART 4: final model development"):
+    TARGET = "TA_misfit"
+    METHOD = "year"
+    SELECTED_HYPOTHESIS = "04"
+    OUTPUT_DIR = Path(__file__).resolve().parent / "xgb_results"
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    PREFIX = f"{TARGET}_{SELECTED_HYPOTHESIS}_{METHOD}"
+
     final_model, final_settings = fit_final_xgb(
         splits,
-        target="TA_misfit",
-        method="year",
-        hypothesis=selected_hypothesis,
+        target=TARGET,
+        method=METHOD,
+        hypothesis=SELECTED_HYPOTHESIS,
         n_iter=30,
         inner_folds=5,
         random_state=42,
-        output_dir="xgb_results",
+        output_dir=OUTPUT_DIR,
     )
 
-    print("Final parameters:")
-    print(final_settings["best_params"])
+    model_path = OUTPUT_DIR / f"{PREFIX}_final_model.joblib"
+    settings_path = OUTPUT_DIR / f"{PREFIX}_final_settings.json"
+    joblib.dump(final_model, model_path)
+    settings_path.write_text(json.dumps(final_settings, indent=2, default=str))
+
+    print(f"Saved model: {model_path.resolve()}")
+    print(f"Saved settings: {settings_path.resolve()}")
+    print("Model exists:", model_path.exists())
 # %%
 #==========================PART 5=================================#
 # Calibration
@@ -355,120 +368,22 @@ from ml_calibration import calibrate_predictions
 with timed_part("PART 5: calibration"):
     plot_df_xgb, stats_xgb, fig_xgb, ax_xgb = calibrate_predictions(
         selected_predictions,
-        target="TA_misfit",
-        method="year",
-        hypothesis="A3",
-    )
-    
-    # Save results
-    output_dir = Path("xgb_results")
-    output_dir.mkdir(exist_ok=True)
-
-    joblib.dump(
-        final_model,
-        output_dir / "TA_misfit_A3_year_final_model.joblib",
+        target=TARGET,
+        method=METHOD,
+        hypothesis=SELECTED_HYPOTHESIS,
     )
 
-    print("Saved final model.")
-
-    with open(output_dir / "TA_misfit_A3_year_final_settings.json", "w") as f:
-        json.dump(final_settings, f, indent=2, default=str)
-        
-    # Save calibration settings: 
-    calibration_settings = {
-        "target": "TA_misfit",
-        "method": "year",
-        "hypothesis": "A3",
+    calibration = {
+        "target": TARGET,
+            "method": METHOD,
+        "hypothesis": SELECTED_HYPOTHESIS,
         "calibration_intercept": stats_xgb["calibration_intercept"],
         "calibration_slope": stats_xgb["calibration_slope"],
         "rmse": stats_xgb["rmse"],
         "mae": stats_xgb["mae"],
         "r2": stats_xgb["r2"],
     }
+    calibration_path = OUTPUT_DIR / f"{PREFIX}_calibration.json"
+    calibration_path.write_text(json.dumps(calibration, indent=2))
+    print(f"Saved calibration: {calibration_path.resolve()}")
 
-    with open(output_dir / "TA_misfit_A3_year_calibration.json", "w") as f:
-        json.dump(calibration_settings, f, indent=2)
-# %% Testing nn models
-from nn_single_target_cv import run_mlp_cv, summarize_mlp_cv
-from compare_mlp_to_baseline import compare_mlp_to_baseline
-
-all_results = []
-
-for hypothesis in ("A", "0", "A1", "A2", "A3", "01", "02", "03", "04"):
-    fold_results, predictions, models = run_mlp_cv(
-        cv_splits,
-        target="TA_misfit",
-        method="year",
-        hypothesis=hypothesis,
-        tune=True,
-        n_iter=12,
-    )
-    all_results.append(fold_results)
-
-combined_mlp_results = pd.concat(all_results, ignore_index=True)
-summary_df, fig = summarize_mlp_cv(combined_mlp_results)
-
-
-hypotheses = ("A", "0", "A1", "A2", "A3", "01", "02", "03", "04")
-
-combined_mlp_results, mlp_summary, mlp_comparison = (
-    compare_mlp_to_baseline(
-        cv_splits,
-        target="TA_misfit",
-        method="year",
-        hypotheses=hypotheses,
-        tune=True,
-        n_iter=12,
-    )
-)
-
-print(mlp_summary)
-print(mlp_comparison)
-
-a3_minus_baseline = (
-    mlp_comparison["A3"] - mlp_comparison["mean_baseline"]
-)
-
-print(a3_minus_baseline)
-print("Mean difference:", a3_minus_baseline.mean())
-print("A3 wins:", (a3_minus_baseline < 0).sum())
-
-rmse_mlp = combined_mlp_results.pivot(
-    index="fold",
-    columns="hypothesis",
-    values="rmse",
-)
-
-print(rmse_mlp)
-
-if "A3" not in rmse_mlp.columns:
-    raise KeyError("A3 results are not present")
-
-for hypothesis in rmse_mlp.columns:
-    if hypothesis != "A3":
-        difference = rmse_mlp["A3"] - rmse_mlp[hypothesis]
-
-        print(f"\nA3 minus {hypothesis}")
-        print(difference)
-        print("Mean difference:", difference.mean())
-        print(
-            "A3 wins:",
-            int((difference < 0).sum()),
-            "of",
-            int(difference.notna().sum()),
-        )
-# %%
-  # FIRST insert hyperparameter tuning here for the selected model 
-  # Then recheck hypotheses from prior step
-  # THEN calibrate      
-# Neural network
-plot_df_nn, stats_nn, fig_nn, ax_nn = calibrate_predictions(
-    combined_mlp_results,
-    target="TA_misfit",
-    method="year",
-    hypothesis="A3",
-    xlabel="Predicted TA misfit",
-    ylabel="Observed TA misfit",
-    title="Neural-network TA-misfit calibration",
-)
-# Then final development model

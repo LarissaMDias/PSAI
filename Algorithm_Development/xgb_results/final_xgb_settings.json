@@ -1,0 +1,18 @@
+{
+  "target": "TA_misfit",
+  "method": "year",
+  "hypothesis": "04",
+  "n_development_rows": 4544,
+  "inner_folds": 5,
+  "n_iter": 30,
+  "best_params": {
+    "subsample": 0.7,
+    "reg_lambda": 10.0,
+    "n_estimators": 200,
+    "min_child_weight": 3,
+    "max_depth": 3,
+    "learning_rate": 0.02,
+    "colsample_bytree": 0.7
+  },
+  "best_inner_rmse": 38.83587383482505
+}

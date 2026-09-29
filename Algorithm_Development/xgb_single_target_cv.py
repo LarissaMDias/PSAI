@@ -20,6 +20,8 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import GroupKFold, KFold, RandomizedSearchCV
 from xgboost import XGBRegressor
 
+MODULE_DIR = Path(__file__).resolve().parent
+DEFAULT_OUTPUT_DIR = MODULE_DIR / "xgb_results" 
 
 _METADATA = {"source_year", "source", "cruise", "name"}
 
@@ -279,28 +281,33 @@ def summarize_xgb_cv(
     ax.grid(axis="x", alpha=0.25)
     fig.tight_layout()
 
-    if output_dir is not None:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
+    if output_dir is None:
+        output_dir = DEFAULT_OUTPUT_DIR
 
-        targets = sorted(summary["target"].dropna().astype(str).unique())
-        methods = sorted(summary["method"].dropna().astype(str).unique())
-        hypotheses = sorted(summary["hypothesis"].dropna().astype(str).unique())
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-        label_parts = [
-            *(targets if len(targets) == 1 else ["combined"]),
-            *(methods if len(methods) == 1 else ["multiple_methods"]),
-            *(hypotheses if len(hypotheses) == 1 else ["multiple_hypotheses"]),
-        ]
-        prefix = "xgb_cv_" + "_".join(_safe_filename(part) for part in label_parts)
+    targets = sorted(summary["target"].dropna().astype(str).unique())
+    methods = sorted(summary["method"].dropna().astype(str).unique())
+    hypotheses = sorted(summary["hypothesis"].dropna().astype(str).unique())
 
-        summary.to_csv(output_dir / f"{prefix}_summary.csv", index=False)
-        fold_results.to_csv(output_dir / f"{prefix}_fold_results.csv", index=False)
-        fig.savefig(
-            output_dir / f"{prefix}_rmse_summary.png",
-            dpi=300,
-            bbox_inches="tight",
-        )
+    label_parts = [
+        *(targets if len(targets) == 1 else ["combined"]),
+        *(methods if len(methods) == 1 else ["multiple_methods"]),
+        *(hypotheses if len(hypotheses) == 1 else ["multiple_hypotheses"]),
+    ]
+
+    prefix = "xgb_cv_" + "_".join(
+        _safe_filename(part) for part in label_parts
+    )
+
+    summary.to_csv(output_dir / f"{prefix}_summary.csv", index=False)
+    fold_results.to_csv(output_dir / f"{prefix}_fold_results.csv", index=False)
+    fig.savefig(
+        output_dir / f"{prefix}_rmse_summary.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
 
     if show_plot:
         plt.show()
