@@ -52,7 +52,7 @@ for path in (PSAI_DIR, ALGORITHM_DIR, ASSESSMENTS_DIR): # Making sure the import
 from Final_XGBs import predict_dataframe
 
 # WRITE YOUR OUTPUT VARIABLE BELOW
-output_variable = "NO3"
+output_variable = "TA"
 
 # Define desired Output Variable here.
 if output_variable == "TA":
