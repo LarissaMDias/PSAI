@@ -115,8 +115,8 @@ def main() -> None:
     row_ids = X_test_raw[ROW_ID].to_numpy(dtype=int)
     obs_by_id = obs.set_index(ROW_ID)
     model_by_id = model_data.set_index(ROW_ID)
-    observed_ta = obs_by_id.loc[row_ids, "TA (uM)"].to_numpy(dtype=float)
-    model_original_ta = model_by_id.loc[row_ids, "TA (uM)"].to_numpy(dtype=float)
+    observed_val = obs_by_id.loc[row_ids, "DIC (uM)"].to_numpy(dtype=float)
+    model_original_val = model_by_id.loc[row_ids, "DIC (uM)"].to_numpy(dtype=float)
 
     X_test = drop_metadata(X_test_raw)
     expected = list(getattr(final_model, "feature_names_in_", X_test.columns))
@@ -141,8 +141,8 @@ def main() -> None:
         "observed": observed_misfit,
         "predicted": predicted,
         "predicted_calibrated": calibrated,
-        "observed_value": observed_ta,
-        "model_original": model_original_ta,
+        "observed_value": observed_val,
+        "model_original": model_original_val,
         "assessment_row_id": row_ids,
     })
     output.to_csv(OUTPUT_DIR / f"{prefix}_predictions.csv", index=False)
@@ -178,3 +178,77 @@ plot_adjusted_assessment(
     residual_convention="model_minus_observation",
     show=True,
 )
+
+# This CSV is produced by the assessment script.
+predictions_csv = Path(
+    "assessment_results/TA_misfit_04_withheld_years_predictions.csv"
+)
+
+# Use calibrated predictions to match the calibrated misfit metrics.
+MISFIT_COLUMN = "predicted_calibrated"
+# Set to -1 only if TA_misfit was defined as original TA - observed TA.
+MISFIT_SIGN = -1
+BINS = 50
+
+from matplotlib.colors import LinearSegmentedColormap
+import matplotlib.pyplot as plt
+
+df = pd.read_csv(predictions_csv)
+required = {"observed_value", "model_original", MISFIT_COLUMN}
+missing = required - set(df.columns)
+if missing:
+    raise KeyError(f"Missing required columns: {sorted(missing)}")
+
+observed_ta = df["observed_value"].to_numpy(dtype=float)
+model_original_ta = df["model_original"].to_numpy(dtype=float)
+predicted_misfit = df[MISFIT_COLUMN].to_numpy(dtype=float)
+
+# Assumes TA_misfit = observed TA - original model TA:
+# adjusted TA = original model TA + predicted misfit.
+adjusted_ta = model_original_ta + MISFIT_SIGN * predicted_misfit
+
+# Requested axes: x = observed TA; y = adjusted TA - original TA.
+x = observed_ta
+y = adjusted_ta - model_original_ta
+valid = np.isfinite(x) & np.isfinite(y)
+x, y = x[valid], y[valid]
+if x.size == 0:
+    raise ValueError("No finite observations remain for plotting")
+
+rmse = np.sqrt(np.mean(y**2))
+bias = np.mean(y)
+
+# np.histogram2d returns counts[x_bin, y_bin].
+counts, xedges, yedges = np.histogram2d(x, y, bins=BINS)
+xidx = np.clip(np.digitize(x, xedges) - 1, 0, BINS - 1)
+yidx = np.clip(np.digitize(y, yedges) - 1, 0, BINS - 1)
+point_density = counts[xidx, yidx] + 1
+log_density = np.log10(point_density)
+
+cmap = LinearSegmentedColormap.from_list(
+    "blue_grey", ["#f7fbff", "#9ecae1", "#08306b"]
+)
+
+fig, ax = plt.subplots(figsize=(7, 5.5))
+sc = ax.scatter(x, y, c=log_density, cmap=cmap, s=8, alpha=0.8)
+ax.axhline(0, color="black", linewidth=1)
+
+ax.set_xlabel(r"Observed TA ($\mu$mol kg$^{-1}$)")
+ax.set_ylabel(r"Adjusted model TA - Original model TA ($\mu$mol kg$^{-1}$)")
+ax.set_title("TA adjustment relative to observed TA")
+
+ax.text(
+    0.02,
+    0.98,
+    f"RMSE = {rmse:.3f}\nBias = {bias:.3f}",
+    transform=ax.transAxes,
+    va="top",
+    fontsize=10,
+    bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+)
+
+cbar = fig.colorbar(sc, ax=ax)
+cbar.set_label(r"log$_{10}$(observation frequency)")
+fig.tight_layout()
+plt.show()
+

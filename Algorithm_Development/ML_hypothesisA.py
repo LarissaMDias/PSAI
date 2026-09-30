@@ -176,7 +176,7 @@ with timed_part("PART 1: data preparation"):
             .head(10)
         )
     # Locations and original values 
-    target = "TA_misfit"
+    target = "DIC_misfit"
 
     idx = y[target].abs().nlargest(10).index
 
@@ -185,8 +185,8 @@ with timed_part("PART 1: data preparation"):
         "lat": model.loc[idx, "lat"],
         "z": model.loc[idx, "z"],
         "time": model.loc[idx, "time"],
-        "model": model.loc[idx, "TA (uM)"],
-        "observed": obs.loc[idx, "TA (uM)"],
+        "model": model.loc[idx, "DIC (uM)"],
+        "observed": obs.loc[idx, "DIC (uM)"],
         "misfit": y.loc[idx, target],
         "source": obs.loc[idx, "source"],
         "cruise": obs.loc[idx, "cruise"],
@@ -210,13 +210,13 @@ with timed_part("PART 1: data preparation"):
     # Choose one to plot
     plot_withhelddata(
         splits,
-        target="TA_misfit",
+        target="DIC_misfit",
         hypothesis="A",
     )
 
     plot_withhelddata(
         splits,
-        target="TA_misfit",
+        target="DIC_misfit",
         hypothesis="0",
     )
 
@@ -276,7 +276,7 @@ with timed_part("PART 2: XGBoost model comparison"):
     combined_results, summary_df, comparison = (
         compare_xgb_to_baseline(
             cv_splits,
-            target="TA_misfit",
+            target="DIC_misfit",
             method="year",
             hypotheses=hypotheses,
             tune=True,
@@ -341,7 +341,7 @@ output_dir.mkdir(parents=True, exist_ok=True)
 with timed_part("PART 3: selected-model tuned CV"):
     selected_fold_results, selected_predictions, selected_models = run_xgb_cv(
         cv_splits,
-        target="TA_misfit",
+        target="DIC_misfit",
         method="year",
         hypothesis=selected_hypothesis,
         tune=True,
@@ -351,7 +351,7 @@ with timed_part("PART 3: selected-model tuned CV"):
     print(selected_fold_results.to_string(index=False))
 
     prefix = (
-        f"TA_misfit_year_{selected_hypothesis}"
+        f"DIC_misfit_year_{selected_hypothesis}"
     )
 
     selected_fold_results.to_csv(
@@ -386,7 +386,7 @@ from pathlib import Path
 import json
 
 with timed_part("PART 4: final model development"):
-    TARGET = "TA_misfit"
+    TARGET = "DIC_misfit"
     METHOD = "year"
     SELECTED_HYPOTHESIS = "04"
     OUTPUT_DIR = Path(__file__).resolve().parent / "xgb_results"
@@ -428,7 +428,7 @@ with timed_part("PART 5: calibration"):
 
     calibration = {
         "target": TARGET,
-            "method": METHOD,
+        "method": METHOD,
         "hypothesis": SELECTED_HYPOTHESIS,
         "calibration_intercept": stats_xgb["calibration_intercept"],
         "calibration_slope": stats_xgb["calibration_slope"],
