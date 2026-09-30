@@ -122,6 +122,7 @@ def main() -> None:
         output_dir=FINAL_OUTPUT_DIR,
     )
     print(sorted(p.name for p in FINAL_OUTPUT_DIR.glob("*")))
+    print(list(final_all_data_model.feature_names_in_))
     
     # Continue assessment of withheld model
     data = splits[TARGET]
@@ -252,6 +253,4 @@ histogram_misfit(
 )
 
 # Insert one more figure with map of %MAE as in bgc workshop
-# %% Train final model for users on all data, including withheld test data
-from pathlib import Path
 

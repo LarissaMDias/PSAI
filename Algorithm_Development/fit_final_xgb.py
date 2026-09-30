@@ -16,8 +16,13 @@ import pandas as pd
 from sklearn.model_selection import GroupKFold, KFold, RandomizedSearchCV
 from xgboost import XGBRegressor
 
-_METADATA = {"source_year", "source", "cruise", "name"}
-
+_METADATA = {
+    "source_year",
+    "source",
+    "cruise",
+    "name",
+    "assessment_row_id",
+}
 
 def _drop_metadata(X: pd.DataFrame) -> pd.DataFrame:
     out = X.drop(columns=[c for c in _METADATA if c in X.columns]).copy()

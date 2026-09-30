@@ -61,20 +61,33 @@ def _first_existing(data: pd.DataFrame, names: tuple[str, ...], label: str) -> p
 
 
 def _prepare_input_aliases(data: pd.DataFrame) -> pd.DataFrame:
-    """Normalize common input names to lat, lon, z, CT, and SA."""
     out = data.copy()
+
     aliases = {
-        "lat": ("lat", "latitude", "LATITUDE", "y"),
-        "lon": ("lon", "longitude", "LONGITUDE", "x"),
+        "lat": ("lat", "latitude", "LATITUDE"),
+        "lon": ("lon", "longitude", "LONGITUDE"),
         "z": ("z", "depth", "DEPTH", "depth_m"),
-        "CT": ("CT", "ct", "temperature", "Temperature", "temp", "TEMP"),
-        "SA": ("SA", "sa", "salinity", "Salinity", "salt", "SALINITY"),
+        "CT": ("CT", "ct", "temperature", "Temperature", "temp"),
+        "SA": ("SA", "sa", "salinity", "Salinity", "salt"),
     }
+
     for canonical, names in aliases.items():
         if canonical not in out.columns:
-            out[canonical] = _first_existing(out, names, canonical)
+            for name in names:
+                if name in out.columns:
+                    out[canonical] = pd.to_numeric(
+                        out[name], errors="coerce"
+                    )
+                    break
+            else:
+                raise KeyError(
+                    f"Could not find {canonical}; tried {list(names)}"
+                )
         else:
-            out[canonical] = pd.to_numeric(out[canonical], errors="coerce")
+            out[canonical] = pd.to_numeric(
+                out[canonical], errors="coerce"
+            )
+
     return out
 
 
@@ -96,34 +109,38 @@ def _add_region(data: pd.DataFrame) -> pd.DataFrame:
     out["region"] = region_input["region"].to_numpy()
     return out
 
-
-def _prepare_features(data: pd.DataFrame, feature_names: list[str]) -> pd.DataFrame:
-    """Create model-ready numeric features and align one-hot region columns."""
+def _prepare_features(
+    data: pd.DataFrame,
+    feature_names: list[str],
+) -> pd.DataFrame:
     out = _prepare_input_aliases(data)
     out = _add_region(out)
 
-    # The training pipeline one-hot encoded region. Recreate that encoding and
-    # then align exactly to the columns stored in the final estimator.
+    # Convert region categories to the same dummy-column style used in training.
     region = out["region"].fillna("unknown").astype(str)
-    encoded = pd.get_dummies(region, prefix="region", dtype=float)
-    numeric = out.drop(columns=["region"], errors="ignore").copy()
-    X = pd.concat([numeric, encoded], axis=1)
-    X = X.drop(columns=[c for c in _METADATA if c in X.columns], errors="ignore")
+    region_dummies = pd.get_dummies(region, dtype=float)
 
-    missing = [c for c in feature_names if c not in X.columns]
-    if missing:
-        raise KeyError(
-            "Input cannot produce predictors required by the saved model: "
-            f"{missing}. Saved model expects {feature_names}."
-        )
+    numeric = out.drop(columns=["region"], errors="ignore")
+    X = pd.concat([numeric, region_dummies], axis=1)
 
-    X = X.loc[:, feature_names].copy()
+    # Never use metadata or IDs as model predictors.
+    X = X.drop(
+        columns=[c for c in _METADATA if c in X.columns],
+        errors="ignore",
+    )
+
+    # Add missing training-time region columns as zeros and discard
+    # input columns that the saved model does not use.
+    X = X.reindex(columns=feature_names, fill_value=0)
+
     nonnumeric = X.select_dtypes(exclude="number").columns.tolist()
     if nonnumeric:
         raise TypeError(f"Predictors must be numeric: {nonnumeric}")
+
     if X.isna().any().any():
         missing_values = X.columns[X.isna().any()].tolist()
         raise ValueError(f"Missing predictor values in: {missing_values}")
+
     return X
 
 
