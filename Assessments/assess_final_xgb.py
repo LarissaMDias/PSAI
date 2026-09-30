@@ -151,104 +151,83 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
 # %% Make plots
-
-from assessment_figures import plot_test_assessment
-from assessment_figures import plot_adjusted_assessment
 from pathlib import Path
-
-df, stats, fig, ax = plot_test_assessment(
-    "assessment_results/TA_misfit_04_withheld_years_predictions.csv",
-    target="TA_misfit",
-    hypothesis="04",
-    output_path="assessment_results/TA_misfit_04_test_predictions.png",
-)
+import sys
 
 ASSESSMENTS_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = ASSESSMENTS_DIR / "assessment_results"
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
-predictions_csv = RESULTS_DIR / "TA_misfit_04_withheld_years_predictions.csv"
-figure_path = RESULTS_DIR / "TA_misfit_04_original_adjusted_test.png"
+if str(ASSESSMENTS_DIR) not in sys.path:
+    sys.path.insert(0, str(ASSESSMENTS_DIR))
+
+from assessment_figures import (
+    plot_test_assessment,
+    plot_adjusted_assessment,
+    histogram_misfit,
+)
+
+TARGET = "TA_misfit"
+HYPOTHESIS = "04"
+
+predictions_csv = (
+    RESULTS_DIR
+    / f"{TARGET}_{HYPOTHESIS}_withheld_years_predictions.csv"
+)
+
+test_figure_path = (
+    RESULTS_DIR
+    / f"{TARGET}_{HYPOTHESIS}_test_predictions.png"
+)
+
+adjusted_figure_path = (
+    RESULTS_DIR
+    / f"{TARGET}_{HYPOTHESIS}_original_adjusted_test.png"
+)
+
+print("ASSESSMENTS_DIR:", ASSESSMENTS_DIR)
+print("RESULTS_DIR:", RESULTS_DIR)
+print("Prediction file:", predictions_csv)
+print("Exists:", predictions_csv.exists())
+
+if not predictions_csv.exists():
+    raise FileNotFoundError(
+        f"Prediction file was not found: {predictions_csv}"
+    )
+
+df, stats, fig, ax = plot_test_assessment(
+    predictions_csv=predictions_csv,
+    target=TARGET,
+    hypothesis=HYPOTHESIS,
+    output_path=test_figure_path,
+)
 
 plot_adjusted_assessment(
     predictions_csv=predictions_csv,
-    output_path=figure_path,
+    output_path=adjusted_figure_path,
     adjusted_column="predicted_calibrated",
     residual_convention="model_minus_observation",
     show=True,
 )
-
-# This CSV is produced by the assessment script.
-predictions_csv = Path(
-    "assessment_results/TA_misfit_04_withheld_years_predictions.csv"
+prediction_path = RESULTS_DIR / (
+    f"{TARGET}_{HYPOTHESIS}_withheld_years_predictions.csv"
 )
 
-# Use calibrated predictions to match the calibrated misfit metrics.
-MISFIT_COLUMN = "predicted_calibrated"
-# Set to -1 only if TA_misfit was defined as original TA - observed TA.
-MISFIT_SIGN = -1
-BINS = 50
-
-from matplotlib.colors import LinearSegmentedColormap
-import matplotlib.pyplot as plt
-
-df = pd.read_csv(predictions_csv)
-required = {"observed_value", "model_original", MISFIT_COLUMN}
-missing = required - set(df.columns)
-if missing:
-    raise KeyError(f"Missing required columns: {sorted(missing)}")
-
-observed_ta = df["observed_value"].to_numpy(dtype=float)
-model_original_ta = df["model_original"].to_numpy(dtype=float)
-predicted_misfit = df[MISFIT_COLUMN].to_numpy(dtype=float)
-
-# Assumes TA_misfit = observed TA - original model TA:
-# adjusted TA = original model TA + predicted misfit.
-adjusted_ta = model_original_ta + MISFIT_SIGN * predicted_misfit
-
-# Requested axes: x = observed TA; y = adjusted TA - original TA.
-x = observed_ta
-y = adjusted_ta - model_original_ta
-valid = np.isfinite(x) & np.isfinite(y)
-x, y = x[valid], y[valid]
-if x.size == 0:
-    raise ValueError("No finite observations remain for plotting")
-
-rmse = np.sqrt(np.mean(y**2))
-bias = np.mean(y)
-
-# np.histogram2d returns counts[x_bin, y_bin].
-counts, xedges, yedges = np.histogram2d(x, y, bins=BINS)
-xidx = np.clip(np.digitize(x, xedges) - 1, 0, BINS - 1)
-yidx = np.clip(np.digitize(y, yedges) - 1, 0, BINS - 1)
-point_density = counts[xidx, yidx] + 1
-log_density = np.log10(point_density)
-
-cmap = LinearSegmentedColormap.from_list(
-    "blue_grey", ["#f7fbff", "#9ecae1", "#08306b"]
+figure_path = OUTPUT_DIR / (
+    f"{TARGET}_{HYPOTHESIS}_residual_density.png"
 )
 
-fig, ax = plt.subplots(figsize=(7, 5.5))
-sc = ax.scatter(x, y, c=log_density, cmap=cmap, s=8, alpha=0.8)
-ax.axhline(0, color="black", linewidth=1)
-
-ax.set_xlabel(r"Observed TA ($\mu$mol kg$^{-1}$)")
-ax.set_ylabel(r"Adjusted model TA - Original model TA ($\mu$mol kg$^{-1}$)")
-ax.set_title("TA adjustment relative to observed TA")
-
-ax.text(
-    0.02,
-    0.98,
-    f"RMSE = {rmse:.3f}\nBias = {bias:.3f}",
-    transform=ax.transAxes,
-    va="top",
-    fontsize=10,
-    bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+histogram_misfit(
+    predictions_csv=prediction_path,
+    output_path=figure_path,
+    adjusted_column="predicted_calibrated",
+    residual_convention="model_minus_observation",
+    bins=50,
+    show=True,
 )
 
-cbar = fig.colorbar(sc, ax=ax)
-cbar.set_label(r"log$_{10}$(observation frequency)")
-fig.tight_layout()
-plt.show()
+# Insert one more figure with map of %MAE as in bgc workshop
+# %% Train final model for users on all data, including withheld test data
+
 

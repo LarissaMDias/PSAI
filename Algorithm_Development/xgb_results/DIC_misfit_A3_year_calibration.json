@@ -1,0 +1,10 @@
+{
+  "target": "DO_misfit",
+  "method": "year",
+  "hypothesis": "A3",
+  "calibration_intercept": -8.53894077411789,
+  "calibration_slope": 0.3536481731474961,
+  "rmse": 29.051920962154995,
+  "mae": 19.249981088045036,
+  "r2": 0.3170231681570991
+}

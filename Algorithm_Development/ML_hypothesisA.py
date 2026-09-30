@@ -176,7 +176,7 @@ with timed_part("PART 1: data preparation"):
             .head(10)
         )
     # Locations and original values 
-    target = "DIC_misfit"
+    target = "DO_misfit"
 
     idx = y[target].abs().nlargest(10).index
 
@@ -185,8 +185,8 @@ with timed_part("PART 1: data preparation"):
         "lat": model.loc[idx, "lat"],
         "z": model.loc[idx, "z"],
         "time": model.loc[idx, "time"],
-        "model": model.loc[idx, "DIC (uM)"],
-        "observed": obs.loc[idx, "DIC (uM)"],
+        "model": model.loc[idx, "DO (uM)"],
+        "observed": obs.loc[idx, "DO (uM)"],
         "misfit": y.loc[idx, target],
         "source": obs.loc[idx, "source"],
         "cruise": obs.loc[idx, "cruise"],
@@ -210,13 +210,13 @@ with timed_part("PART 1: data preparation"):
     # Choose one to plot
     plot_withhelddata(
         splits,
-        target="DIC_misfit",
+        target="DO_misfit",
         hypothesis="A",
     )
 
     plot_withhelddata(
         splits,
-        target="DIC_misfit",
+        target="DO_misfit",
         hypothesis="0",
     )
 
@@ -276,7 +276,7 @@ with timed_part("PART 2: XGBoost model comparison"):
     combined_results, summary_df, comparison = (
         compare_xgb_to_baseline(
             cv_splits,
-            target="DIC_misfit",
+            target="DO_misfit",
             method="year",
             hypotheses=hypotheses,
             tune=True,
@@ -292,7 +292,7 @@ with timed_part("PART 2: XGBoost model comparison"):
 
     print(rmse)
 
-    selected_hypothesis = "04"
+    selected_hypothesis = "A"
 
     if selected_hypothesis in rmse.columns:
         for hypothesis in rmse.columns:
@@ -331,9 +331,37 @@ with timed_part("PART 2: XGBoost model comparison"):
 #    MAE = 21.007
 #    R² = 0.307947
 #    Calibration equation: predicted = 13.2121 + 0.351718 * observed
+# 2. DIC_misfit selected model
+#    Algorithm: XGBoost
+#    Hypothesis: A3 -> lat, lon, z, region, SA, CT, TA, DIC, DO, NO3, log(Chl),
+#        NH4
+#    CV method: year-grouped five-fold CV
+#    Tuning: randomized search, 12 iterations per outer fold
+#    Reason: comparative mean RMSE, MAE, and R2 to A; simplest model with low
+#        metrics
+#   n = 4,581
+#   RMSE = 56.1791
+#   MAE = 36.06
+#   R² = 0.369326
+#   Calibration equation: predicted = 25.0002 + 0.383493 * observed
+# 3. DO_misfit selected model
+#    Algorithm: XGBoost
+#    Hypothesis: A3 -> lat, lon, z, region, SA, CT, TA, DIC, DO, NO3, log(Chl),
+#        NH4
+#    CV method: year-grouped five-fold CV
+#    Tuning: randomized search, 12 iterations per outer fold
+#    Reason: comparative mean RMSE, MAE, and R2 to A; simplest model with low
+#        metrics
+#    n = 7,185
+#    RMSE = 29.0519
+#    MAE = 19.25
+#    R² = 0.317023
+#    Calibration equation: predicted = -8.53894 + 0.353648 * observed
 
 from xgb_single_target_cv import run_xgb_cv
 from sklearn.metrics import mean_squared_error
+    
+selected_hypothesis = "A3"
 
 output_dir = Path("xgb_results")
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -341,7 +369,7 @@ output_dir.mkdir(parents=True, exist_ok=True)
 with timed_part("PART 3: selected-model tuned CV"):
     selected_fold_results, selected_predictions, selected_models = run_xgb_cv(
         cv_splits,
-        target="DIC_misfit",
+        target="DO_misfit",
         method="year",
         hypothesis=selected_hypothesis,
         tune=True,
@@ -351,7 +379,7 @@ with timed_part("PART 3: selected-model tuned CV"):
     print(selected_fold_results.to_string(index=False))
 
     prefix = (
-        f"DIC_misfit_year_{selected_hypothesis}"
+        f"DO_misfit_year_{selected_hypothesis}"
     )
 
     selected_fold_results.to_csv(
@@ -386,9 +414,9 @@ from pathlib import Path
 import json
 
 with timed_part("PART 4: final model development"):
-    TARGET = "DIC_misfit"
+    TARGET = "DO_misfit"
     METHOD = "year"
-    SELECTED_HYPOTHESIS = "04"
+    SELECTED_HYPOTHESIS = "A3"
     OUTPUT_DIR = Path(__file__).resolve().parent / "xgb_results"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     PREFIX = f"{TARGET}_{SELECTED_HYPOTHESIS}_{METHOD}"
@@ -417,7 +445,16 @@ with timed_part("PART 4: final model development"):
 # Calibration
 #=================================================================#
 from ml_calibration import calibrate_predictions
+TARGET = "DO_misfit"
+METHOD = "year"
+SELECTED_HYPOTHESIS = "A3"
 
+plot_df_xgb, stats_xgb, fig_xgb, ax_xgb = calibrate_predictions(
+    selected_predictions,
+    target=TARGET,
+    method=METHOD,
+    hypothesis=SELECTED_HYPOTHESIS,
+)
 with timed_part("PART 5: calibration"):
     plot_df_xgb, stats_xgb, fig_xgb, ax_xgb = calibrate_predictions(
         selected_predictions,

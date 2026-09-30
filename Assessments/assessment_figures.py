@@ -270,3 +270,169 @@ def plot_adjusted_assessment(
 if __name__ == "__main__":
     print("Import plot_adjusted_ta_assessment() and call it with an assessment CSV.")
 
+def _density_colors(x: np.ndarray, y: np.ndarray, bins: int) -> np.ndarray:
+    counts, xedges, yedges = np.histogram2d(x, y, bins=bins)
+    xidx = np.clip(np.digitize(x, xedges) - 1, 0, bins - 1)
+    yidx = np.clip(np.digitize(y, yedges) - 1, 0, bins - 1)
+    return np.log10(counts[xidx, yidx] + 1.0)
+
+
+def _plot_panel(
+    ax: plt.Axes,
+    observed: np.ndarray,
+    residual: np.ndarray,
+    *,
+    title: str,
+    bins: int,
+    cmap: Any,
+) -> Any:
+    finite = np.isfinite(observed) & np.isfinite(residual)
+    x = observed[finite]
+    y = residual[finite]
+    if len(x) < 2:
+        raise ValueError(f"At least two finite records are required for {title}")
+
+    log_density = _density_colors(x, y, bins)
+    scatter = ax.scatter(
+        x,
+        y,
+        c=log_density,
+        cmap=cmap,
+        s=10,
+        alpha=0.8,
+        edgecolors="none",
+    )
+    ax.axhline(0.0, color="black", linewidth=1.0)
+    ax.set_xlabel(r"Observed TA ($\mu$mol kg$^{-1}$)")
+    ax.set_ylabel(r"Model TA $-$ observed TA ($\mu$mol kg$^{-1}$)")
+    ax.set_title(title)
+    ax.grid(alpha=0.2)
+
+    rmse = float(np.sqrt(np.mean(y**2)))
+    bias = float(np.mean(y))
+    ax.text(
+        0.03,
+        0.97,
+        f"n = {len(x):,}\nRMSE = {rmse:.3g}\nBias = {bias:.3g}",
+        transform=ax.transAxes,
+        va="top",
+        fontsize=9,
+        bbox={"facecolor": "white", "alpha": 0.85, "edgecolor": "0.7"},
+    )
+    return scatter
+
+
+def histogram_misfit(
+    predictions_csv: str | Path,
+    *,
+    output_path: str | Path | None = None,
+    adjusted_column: str = "predicted_calibrated",
+    residual_convention: str = "model_minus_observation",
+    bins: int = 50,
+    show: bool = True,
+) -> tuple[pd.DataFrame, dict[str, dict[str, float]], plt.Figure]:
+    """Plot original and adjusted TA residuals against observed TA.
+
+    Both panels use the same y-axis limits, centered at zero. The limit is
+    the largest absolute residual across the original and adjusted models.
+    """
+    path = Path(predictions_csv).expanduser().resolve()
+    if not path.exists():
+        raise FileNotFoundError(f"Prediction file not found: {path}")
+    if bins < 2:
+        raise ValueError("bins must be at least 2")
+    if residual_convention not in {
+        "model_minus_observation",
+        "observation_minus_model",
+    }:
+        raise ValueError("Invalid residual_convention")
+
+    df = pd.read_csv(path).replace([np.inf, -np.inf], np.nan)
+    required = {"observed_value", "model_original", adjusted_column}
+    missing = required - set(df.columns)
+    if missing:
+        raise KeyError(f"Prediction file is missing columns: {sorted(missing)}")
+
+    df = df.dropna(subset=list(required)).copy()
+    if len(df) < 2:
+        raise ValueError("At least two finite assessment records are required")
+
+    observed = df["observed_value"].to_numpy(dtype=float)
+    original = df["model_original"].to_numpy(dtype=float)
+    predicted_residual = df[adjusted_column].to_numpy(dtype=float)
+
+    if residual_convention == "model_minus_observation":
+        adjusted = original - predicted_residual
+    else:
+        adjusted = original + predicted_residual
+
+    original_residual = original - observed
+    adjusted_residual = adjusted - observed
+    df["adjusted_model"] = adjusted
+    df["original_residual"] = original_residual
+    df["adjusted_residual"] = adjusted_residual
+
+    stats = {
+        "original": {
+            "n": int(len(df)),
+            "rmse": float(np.sqrt(np.mean(original_residual**2))),
+            "bias": float(np.mean(original_residual)),
+        },
+        "adjusted": {
+            "n": int(len(df)),
+            "rmse": float(np.sqrt(np.mean(adjusted_residual**2))),
+            "bias": float(np.mean(adjusted_residual)),
+        },
+    }
+
+    cmap = LinearSegmentedColormap.from_list(
+        "blue_grey", ["#f7fbff", "#9ecae1", "#08306b"]
+    )
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5.5), constrained_layout=True)
+    scatters = [
+        _plot_panel(
+            axes[0], observed, original_residual,
+            title="Original model TA", bins=bins, cmap=cmap,
+        ),
+        _plot_panel(
+            axes[1], observed, adjusted_residual,
+            title="Adjusted model TA", bins=bins, cmap=cmap,
+        ),
+    ]
+
+    # Shared observed-TA x limits for direct visual comparison.
+    x_min = float(observed.min())
+    x_max = float(observed.max())
+    x_span = x_max - x_min if x_max > x_min else 1.0
+    x_margin = 0.05 * x_span
+    for ax in axes:
+        ax.set_xlim(x_min - x_margin, x_max + x_margin)
+
+    # Shared residual y limits, centered exactly on zero.
+    residual_max = float(
+        np.max(np.abs(np.concatenate([original_residual, adjusted_residual])))
+    )
+    y_limit = residual_max if residual_max > 0 else 1.0
+    for ax in axes:
+        ax.set_ylim(-y_limit, y_limit)
+
+    cbar = fig.colorbar(scatters[-1], ax=axes, pad=0.02)
+    cbar.set_label(r"$\log_{10}$(bin frequency + 1)")
+    fig.suptitle("TA residuals versus observed TA", fontsize=14)
+
+    if output_path is not None:
+        output = Path(output_path).expanduser().resolve()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=300, bbox_inches="tight")
+        print(f"Saved figure: {output}")
+
+    print("Original residual metrics:", stats["original"])
+    print("Adjusted residual metrics:", stats["adjusted"])
+    print(f"Shared residual y-axis: [-{y_limit:.6g}, {y_limit:.6g}]")
+    if show:
+        plt.show()
+    return df, stats, fig
+
+
+if __name__ == "__main__":
+    print("Import plot_ta_misfit_density() and call it with an assessment CSV.")
