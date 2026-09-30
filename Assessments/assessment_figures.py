@@ -408,13 +408,27 @@ def histogram_misfit(
     for ax in axes:
         ax.set_xlim(x_min - x_margin, x_max + x_margin)
 
-    # Shared residual y limits, centered exactly on zero.
-    residual_max = float(
-        np.max(np.abs(np.concatenate([original_residual, adjusted_residual])))
-    )
-    y_limit = residual_max if residual_max > 0 else 1.0
+    # Shared residual y-limits centered on zero.
+    # The limit contains 95% of the absolute residual magnitudes
+    # across both original and adjusted models.
+    all_residuals = np.concatenate([
+        original_residual[np.isfinite(original_residual)],
+        adjusted_residual[np.isfinite(adjusted_residual)],
+    ])
+
+    if all_residuals.size == 0:
+        raise ValueError("No finite residuals available for setting y-axis limits")
+
+    y_limit = float(np.percentile(np.abs(all_residuals), 99))
+    y_limit = y_limit if y_limit > 0 else 1.0
+
     for ax in axes:
         ax.set_ylim(-y_limit, y_limit)
+
+    print(
+        "Shared residual y-axis contains 95% of absolute residual magnitudes: "
+        f"[-{y_limit:.3g}, {y_limit:.3g}]"
+    )
 
     cbar = fig.colorbar(scatters[-1], ax=axes, pad=0.02)
     cbar.set_label(r"$\log_{10}$(bin frequency + 1)")

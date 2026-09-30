@@ -1,0 +1,33 @@
+{
+  "target": "TA_misfit",
+  "hypothesis": "04",
+  "method": "year",
+  "n_rows": 5953,
+  "inner_folds": 5,
+  "n_iter": 30,
+  "random_state": 42,
+  "best_params": {
+    "subsample": 0.7,
+    "reg_lambda": 10.0,
+    "n_estimators": 200,
+    "min_child_weight": 1,
+    "max_depth": 3,
+    "learning_rate": 0.02,
+    "colsample_bytree": 1.0
+  },
+  "best_inner_rmse": 39.80999616439926,
+  "feature_names": [
+    "SA",
+    "CT",
+    "Admiralty",
+    "Bellingham, Samish, Padilla Bays",
+    "Hood Canal",
+    "Main Basin",
+    "South Sound",
+    "Whidbey Basin",
+    "coastal",
+    "offshore",
+    "assessment_row_id"
+  ],
+  "uses_all_available_data": true
+}

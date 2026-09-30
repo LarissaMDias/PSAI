@@ -99,6 +99,31 @@ def main() -> None:
     results = make_single_target_data(X_by_hypothesis, y)
     splits = withhold_test_years(results, step=STEP, remove_year_column=False)
 
+    # Train final model here
+    from train_final_model import fit_final_xgb_all_data
+
+    TARGET = "TA_misfit"
+    HYPOTHESIS = "04"
+    METHOD = "year"
+
+    FINAL_OUTPUT_DIR = ASSESSMENTS_DIR / "xgb_results"
+    FINAL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+    print("Final model output directory:", FINAL_OUTPUT_DIR.resolve())
+
+    final_all_data_model, final_all_data_settings = fit_final_xgb_all_data(
+        results,
+        target=TARGET,
+        hypothesis=HYPOTHESIS,
+        method=METHOD,
+        n_iter=30,
+        inner_folds=5,
+        random_state=42,
+        output_dir=FINAL_OUTPUT_DIR,
+    )
+    print(sorted(p.name for p in FINAL_OUTPUT_DIR.glob("*")))
+    
+    # Continue assessment of withheld model
     data = splits[TARGET]
     X_test_raw = data[f"X_{HYPOTHESIS}_test"]
     y_test = data[f"y_{HYPOTHESIS}_test"].iloc[:, 0]
@@ -115,8 +140,8 @@ def main() -> None:
     row_ids = X_test_raw[ROW_ID].to_numpy(dtype=int)
     obs_by_id = obs.set_index(ROW_ID)
     model_by_id = model_data.set_index(ROW_ID)
-    observed_val = obs_by_id.loc[row_ids, "DIC (uM)"].to_numpy(dtype=float)
-    model_original_val = model_by_id.loc[row_ids, "DIC (uM)"].to_numpy(dtype=float)
+    observed_val = obs_by_id.loc[row_ids, "TA (uM)"].to_numpy(dtype=float)
+    model_original_val = model_by_id.loc[row_ids, "TA (uM)"].to_numpy(dtype=float)
 
     X_test = drop_metadata(X_test_raw)
     expected = list(getattr(final_model, "feature_names_in_", X_test.columns))
@@ -147,7 +172,6 @@ def main() -> None:
     })
     output.to_csv(OUTPUT_DIR / f"{prefix}_predictions.csv", index=False)
     print(f"Saved predictions: {OUTPUT_DIR / f'{prefix}_predictions.csv'}")
-
 
 if __name__ == "__main__":
     main()
@@ -229,5 +253,5 @@ histogram_misfit(
 
 # Insert one more figure with map of %MAE as in bgc workshop
 # %% Train final model for users on all data, including withheld test data
-
+from pathlib import Path
 
