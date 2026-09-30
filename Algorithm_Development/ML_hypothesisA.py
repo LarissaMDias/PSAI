@@ -210,13 +210,13 @@ with timed_part("PART 1: data preparation"):
     # Choose one to plot
     plot_withhelddata(
         splits,
-        target="DO_misfit",
+        target="NO3_misfit",
         hypothesis="A",
     )
 
     plot_withhelddata(
         splits,
-        target="DO_misfit",
+        target="NO3_misfit",
         hypothesis="0",
     )
 
@@ -276,7 +276,7 @@ with timed_part("PART 2: XGBoost model comparison"):
     combined_results, summary_df, comparison = (
         compare_xgb_to_baseline(
             cv_splits,
-            target="DO_misfit",
+            target="NO3_misfit",
             method="year",
             hypotheses=hypotheses,
             tune=True,
@@ -357,11 +357,23 @@ with timed_part("PART 2: XGBoost model comparison"):
 #    MAE = 19.25
 #    R² = 0.317023
 #    Calibration equation: predicted = -8.53894 + 0.353648 * observed
+# 4. NO3_misfit selected model
+#    Algorithm: XGBoost
+#    Hypothesis: A -> lat, lon, z, decimal year, sin_doy, cos_doy, region, SA, 
+#        CT, TA, DIC, DO, NO3, log_Chl, NH4
+#    CV method: year-grouped five-fold CV
+#    Tuning: randomized search, 12 iterations per outer fold
+#    Reason: best mean RMSE, MAE, and R2
+#    n = 16,871
+#    RMSE = 3.43501
+#    MAE = 2.31198
+#    R² = 0.514300
+#    Calibration equation: predicted = 2.07558 + 0.505894 * observed
 
 from xgb_single_target_cv import run_xgb_cv
 from sklearn.metrics import mean_squared_error
     
-selected_hypothesis = "A3"
+selected_hypothesis = "A"
 
 output_dir = Path("xgb_results")
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -369,7 +381,7 @@ output_dir.mkdir(parents=True, exist_ok=True)
 with timed_part("PART 3: selected-model tuned CV"):
     selected_fold_results, selected_predictions, selected_models = run_xgb_cv(
         cv_splits,
-        target="DO_misfit",
+        target="NO3_misfit",
         method="year",
         hypothesis=selected_hypothesis,
         tune=True,
@@ -379,7 +391,7 @@ with timed_part("PART 3: selected-model tuned CV"):
     print(selected_fold_results.to_string(index=False))
 
     prefix = (
-        f"DO_misfit_year_{selected_hypothesis}"
+        f"NO3_misfit_year_{selected_hypothesis}"
     )
 
     selected_fold_results.to_csv(
@@ -414,9 +426,9 @@ from pathlib import Path
 import json
 
 with timed_part("PART 4: final model development"):
-    TARGET = "DO_misfit"
+    TARGET = "NO3_misfit"
     METHOD = "year"
-    SELECTED_HYPOTHESIS = "A3"
+    SELECTED_HYPOTHESIS = "A"
     OUTPUT_DIR = Path(__file__).resolve().parent / "xgb_results"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     PREFIX = f"{TARGET}_{SELECTED_HYPOTHESIS}_{METHOD}"
@@ -445,9 +457,9 @@ with timed_part("PART 4: final model development"):
 # Calibration
 #=================================================================#
 from ml_calibration import calibrate_predictions
-TARGET = "DO_misfit"
+TARGET = "NO3_misfit"
 METHOD = "year"
-SELECTED_HYPOTHESIS = "A3"
+SELECTED_HYPOTHESIS = "A"
 
 plot_df_xgb, stats_xgb, fig_xgb, ax_xgb = calibrate_predictions(
     selected_predictions,

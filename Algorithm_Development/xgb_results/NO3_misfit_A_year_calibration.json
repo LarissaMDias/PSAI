@@ -1,0 +1,10 @@
+{
+  "target": "NO3_misfit",
+  "method": "year",
+  "hypothesis": "A",
+  "calibration_intercept": 2.075577982089946,
+  "calibration_slope": 0.5058939428875295,
+  "rmse": 3.4350096722672947,
+  "mae": 2.311981152737475,
+  "r2": 0.5143003266845383
+}
