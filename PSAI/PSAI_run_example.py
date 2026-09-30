@@ -137,6 +137,6 @@ print("\nPredictions:")
 print(predicted)
 
 # Optionally saving output
-output_path = PSAI_DIR / f"example_{TARGET}_{HYPOTHESIS}_predicted.csv"
+output_path = PSAI_DIR / f"example_results/example_{TARGET}_{HYPOTHESIS}_predicted.csv"
 predicted.to_csv(output_path, index=False)
 print("\nSaved:", output_path.resolve())
