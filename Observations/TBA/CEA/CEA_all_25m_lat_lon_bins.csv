@@ -1,0 +1,152 @@
+_x_bin,_y_bin,Center_Lat,Center_Lon,n_records,Sources,Station_Names,Source_Names,Source_Files
+-409733,204457,45.91661426518146,-130.02524232789705,7,bottle,Axial Base Junction Box LJ03A; Axial Base Shallow Profiler,Axial Base Junction Box LJ03A; Axial Base Shallow Profiler,bottle_data
+-409733,204460,45.9172879985627,-130.02524232789705,1,bottle,Axial Eastern Caldera,Axial Eastern Caldera,bottle_data
+-409732,204457,45.91661426518146,-130.02492498611352,4,bottle,Axial Base Shallow Profiler; Axial Seamount International District 2,Axial Base Shallow Profiler; Axial Seamount International District 2,bottle_data
+-409732,204459,45.917063420768955,-130.02492498611352,1,bottle,Axial Central Caldera,Axial Central Caldera,bottle_data
+-409730,204458,45.91683884297521,-130.0242903025464,1,bottle,Axial ASHES Vent Field,Axial ASHES Vent Field,bottle_data
+-409698,204532,45.93345759971254,-130.01413536547284,1,bottle,Axial ASHS Vent Field,Axial ASHS Vent Field,bottle_data
+-409697,204533,45.93368217750629,-130.0138180236893,1,bottle,Axial ASHS Vent Field,Axial ASHS Vent Field,bottle_data
+-409681,204626,45.954567912324826,-130.0087405551525,1,bottle,Axial Central Caldera,Axial Central Caldera,bottle_data
+-409681,204627,45.95479249011858,-130.0087405551525,4,bottle,Axial Central Caldera,Axial Central Caldera,bottle_data
+-409587,204501,45.92649568810636,-129.97891042749893,1,bottle,Axial Seamount International District 1,Axial Seamount International District 1,bottle_data
+-409572,204561,45.93997035573123,-129.9741503007457,2,bottle,Axial Eastern Caldera,Axial Eastern Caldera,bottle_data
+-408913,204091,45.83441879266978,-129.76502206538706,1,bottle,Axial Base Deep Profiler - 500 m N,Axial Base Deep Profiler - 500 m N,bottle_data
+-408909,204055,45.82633399209486,-129.76375269825286,1,bottle,Axial Base Deep Profiler - 500 m SW,Axial Base Deep Profiler - 500 m SW,bottle_data
+-408908,204055,45.82633399209486,-129.76343535646933,21,bottle,Axial Base Deep Profiler,Axial Base Deep Profiler,bottle_data
+-408896,204048,45.824761947538626,-129.75962725506673,21,bottle,Axial Base Deep Profiler,Axial Base Deep Profiler,bottle_data
+-408895,204069,45.82947808120733,-129.75930991328318,2,bottle,Axial Base Deep Profiler,Axial Base Deep Profiler,bottle_data
+-408895,204070,45.82970265900108,-129.75930991328318,2,bottle,Axial Base Deep Profiler,Axial Base Deep Profiler,bottle_data
+-408895,204092,45.83464337046353,-129.75930991328318,21,bottle,Axial Base Deep Profiler,Axial Base Deep Profiler,bottle_data
+-408895,204124,45.84182985986346,-129.75930991328318,30,bottle,Axial Base Shallow Profiler - 250 m NW,Axial Base Shallow Profiler - 250 m NW,bottle_data
+-408894,204070,45.82970265900108,-129.75899257149965,4,bottle,Axial Base Deep Profiler - 500 m N,Axial Base Deep Profiler - 500 m N,bottle_data
+-408894,204090,45.834194214876035,-129.75899257149965,20,bottle,Axial Base Deep Profiler - 500 m N,Axial Base Deep Profiler - 500 m N,bottle_data
+-408892,204091,45.83441879266978,-129.75835788793253,21,bottle,Axial Base Deep Profiler,Axial Base Deep Profiler,bottle_data
+-408889,204086,45.83329590370104,-129.7574058625819,31,bottle,Axial Base Shallow Profiler - 500 m NW,Axial Base Shallow Profiler - 500 m NW,bottle_data
+-408887,204040,45.82296532518865,-129.7567711790148,1,bottle,Axial Base Shallow Profiler - 900 m SSW,Axial Base Shallow Profiler - 900 m SSW,bottle_data
+-408887,204073,45.83037639238232,-129.7567711790148,1,bottle,Axial Base Shallow Profiler - 250 m W,Axial Base Shallow Profiler - 250 m W,bottle_data
+-408886,204073,45.83037639238232,-129.75645383723125,96,bottle,Axial Base Shallow Profiler - 250 m W,Axial Base Shallow Profiler - 250 m W,bottle_data
+-408885,204073,45.83037639238232,-129.7561364954477,1,bottle,Axial Base Shallow Profiler - 200 m W,Axial Base Shallow Profiler - 200 m W,bottle_data
+-408882,204073,45.83037639238232,-129.75518447009705,98,bottle,Axial Base Shallow Profiler - 150 m W,Axial Base Shallow Profiler - 150 m W,bottle_data
+-408879,204013,45.81690172475746,-129.7542324447464,3,bottle,Axial Base Junction Box LJ03A,Axial Base Junction Box LJ03A,bottle_data
+-408878,204012,45.816677146963706,-129.75391510296285,3,bottle,Axial Base Junction Box LJ03A,Axial Base Junction Box LJ03A,bottle_data
+-408878,204013,45.81690172475746,-129.75391510296285,6,bottle,Axial Base Junction Box LJ03A,Axial Base Junction Box LJ03A,bottle_data
+-408876,204073,45.83037639238232,-129.75328041939576,8,bottle,Axial Base Shallow Profiler,Axial Base Shallow Profiler,bottle_data
+-408876,204074,45.83060097017607,-129.75328041939576,1,bottle,"Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E","Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E",bottle_data
+-408865,204074,45.83060097017607,-129.74978965977672,34,bottle,Axial Base Shallow Profiler - 250 m E,Axial Base Shallow Profiler - 250 m E,bottle_data
+-408863,204056,45.82655856988861,-129.74915497620964,29,bottle,Axial Base Shallow Profiler,Axial Base Shallow Profiler,bottle_data
+-408857,204056,45.82655856988861,-129.74725092550833,25,bottle,Axial Base Shallow Profiler,Axial Base Shallow Profiler,bottle_data
+-408856,204074,45.83060097017607,-129.7469335837248,20,bottle,Axial Base Shallow Profiler - 500 m E,Axial Base Shallow Profiler - 500 m E,bottle_data
+-408856,204091,45.83441879266978,-129.7469335837248,29,bottle,Axial Base Shallow Profiler,Axial Base Shallow Profiler,bottle_data
+-408855,204072,45.830151814588575,-129.74661624194124,65,bottle,Axial Base Shallow Profiler - 500 m E,Axial Base Shallow Profiler - 500 m E,bottle_data
+-408855,204073,45.83037639238232,-129.74661624194124,21,bottle,Axial Base Shallow Profiler - 500 m E,Axial Base Shallow Profiler - 500 m E,bottle_data
+-408855,204074,45.83060097017607,-129.74661624194124,1,bottle,Axial Base Shallow Profiler - 500 m E,Axial Base Shallow Profiler - 500 m E,bottle_data
+-408854,204069,45.82947808120733,-129.74629890015768,38,bottle,"Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E","Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E",bottle_data
+-408854,204070,45.82970265900108,-129.74629890015768,74,bottle,"Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E","Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E",bottle_data
+-408854,204072,45.830151814588575,-129.74629890015768,25,bottle,Axial Base Shallow Profiler - 500 m E,Axial Base Shallow Profiler - 500 m E,bottle_data
+-408853,204069,45.82947808120733,-129.74598155837413,38,bottle,Axial Base Deep Profiler - 1000 m E,Axial Base Deep Profiler - 1000 m E,bottle_data
+-408851,203976,45.80859234638879,-129.74534687480704,1,bottle,"Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E","Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E",bottle_data
+-408851,204016,45.8175754581387,-129.74534687480704,1,bottle,"Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E","Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E",bottle_data
+-408840,204053,45.82588483650736,-129.741856115188,1,bottle,"Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E","Axial Base Deep Profiler - 1000 m E,Axial Base Shallow Profiler - 550 m E",bottle_data
+-408833,204074,45.83060097017607,-129.73963472270316,52,bottle,Axial Base Deep Profiler - 1000 m E,Axial Base Deep Profiler - 1000 m E,bottle_data
+-396909,197612,44.379379266978084,-125.95565129566761,30,bottle,Oregon Offshore Shallow Profiler - 250 m E,Oregon Offshore Shallow Profiler - 250 m E,bottle_data
+-395186,198157,44.501774164570605,-125.40887140261307,3,bottle,Slope Base Junction Box LJ01A,Slope Base Junction Box LJ01A,bottle_data
+-395185,198157,44.501774164570605,-125.40855406082953,2,bottle,Slope Base Shallow Profiler,Slope Base Shallow Profiler,bottle_data
+-395157,198201,44.51165558749551,-125.39966849089016,1,bottle,Slope Base Shallow Profiler,Slope Base Shallow Profiler,bottle_data
+-395147,198280,44.52939723320158,-125.39649507305468,29,bottle,Slope Base Shallow Profiler - 500 m W,Slope Base Shallow Profiler - 500 m W,bottle_data
+-395144,198217,44.515248832195475,-125.39554304770402,20,bottle,Slope Base Shallow Profiler,Slope Base Shallow Profiler,bottle_data
+-395144,198260,44.52490567732663,-125.39554304770402,35,bottle,Slope Base Shallow Profiler - 500 m W,Slope Base Shallow Profiler - 500 m W,bottle_data
+-395144,198277,44.52872349982034,-125.39554304770402,20,bottle,Slope Base Shallow Profiler - 500 m W,Slope Base Shallow Profiler - 500 m W,bottle_data
+-395143,198255,44.523782788357884,-125.39522570592048,2,bottle,Slope Base Junction Box LJ01A - 250 m SW,Slope Base Junction Box LJ01A - 250 m SW,bottle_data
+-395140,198265,44.526028566295366,-125.39427368056984,27,bottle,Slope Base Shallow Profiler - 500 m SW,Slope Base Shallow Profiler - 500 m SW,bottle_data
+-395136,198278,44.52894807761408,-125.39300431343564,33,bottle,Slope Base Shallow Profiler - 250 m W,Slope Base Shallow Profiler - 250 m W,bottle_data
+-395135,198278,44.52894807761408,-125.39268697165208,31,bottle,Slope Base Shallow Profiler - 250 m W,Slope Base Shallow Profiler - 250 m W,bottle_data
+-395135,198280,44.52939723320158,-125.39268697165208,33,bottle,Slope Base Shallow Profiler - 250 m W,Slope Base Shallow Profiler - 250 m W,bottle_data
+-395134,198278,44.52894807761408,-125.39236962986854,24,bottle,Slope Base Shallow Profiler - 250 m W,Slope Base Shallow Profiler - 250 m W,bottle_data
+-395134,198279,44.529172655407834,-125.39236962986854,32,bottle,Slope Base Shallow Profiler - 250 m W,Slope Base Shallow Profiler - 250 m W,bottle_data
+-395132,198277,44.52872349982034,-125.39173494630144,94,bottle,Slope Base Shallow Profiler - 200 m W,Slope Base Shallow Profiler - 200 m W,bottle_data
+-395132,198295,44.5327659001078,-125.39173494630144,25,bottle,Slope Base Shallow Profiler,Slope Base Shallow Profiler,bottle_data
+-395129,198280,44.52939723320158,-125.3907829209508,1,bottle,Slope Base Shallow Profiler - 100 m W,Slope Base Shallow Profiler - 100 m W,bottle_data
+-395127,198216,44.51502425440172,-125.3901482373837,3,bottle,Slope Base Junction Box LJ01A,Slope Base Junction Box LJ01A,bottle_data
+-395127,198217,44.515248832195475,-125.3901482373837,5,bottle,Slope Base Junction Box LJ01A,Slope Base Junction Box LJ01A,bottle_data
+-395127,198218,44.51547340998922,-125.3901482373837,2,bottle,Slope Base Junction Box LJ01A - 250 m SW,Slope Base Junction Box LJ01A - 250 m SW,bottle_data
+-395127,198219,44.51569798778297,-125.3901482373837,2,bottle,Slope Base Junction Box LJ01A - 250 m SW,Slope Base Junction Box LJ01A - 250 m SW,bottle_data
+-395126,198216,44.51502425440172,-125.38983089560016,2,bottle,Slope Base Junction Box LJ01A,Slope Base Junction Box LJ01A,bottle_data
+-395126,198217,44.515248832195475,-125.38983089560016,2,bottle,Slope Base Junction Box LJ01A,Slope Base Junction Box LJ01A,bottle_data
+-395125,198197,44.51075727632052,-125.3895135538166,39,bottle,Slope Base Junction Box LJ01A - 500 m S,Slope Base Junction Box LJ01A - 500 m S,bottle_data
+-395125,198278,44.52894807761408,-125.3895135538166,4,bottle,Slope Base Shallow Profiler,Slope Base Shallow Profiler,bottle_data
+-395124,198278,44.52894807761408,-125.38919621203306,2,bottle,Slope Base Shallow Profiler - 200 m W,Slope Base Shallow Profiler - 200 m W,bottle_data
+-395123,198214,44.51457509881423,-125.3888788702495,30,bottle,Slope Base Junction Box LV01A - 100 m SE,Slope Base Junction Box LV01A - 100 m SE,bottle_data
+-395123,198278,44.52894807761408,-125.3888788702495,4,bottle,Slope Base Shallow Profiler - 200 m W,Slope Base Shallow Profiler - 200 m W,bottle_data
+-395123,198314,44.537032878189,-125.3888788702495,27,bottle,Slope Base Shallow Profiler - 250 m E,Slope Base Shallow Profiler - 250 m E,bottle_data
+-395120,198259,44.52468109953288,-125.38792684489886,26,bottle,Slope Base Shallow Profiler,Slope Base Shallow Profiler,bottle_data
+-395119,198282,44.529846388789075,-125.38760950311531,2,bottle,Slope Base Shallow Profiler - 200 m W,Slope Base Shallow Profiler - 200 m W,bottle_data
+-395114,198314,44.537032878189,-125.38602279419757,1,bottle,Slope Base Shallow Profiler - 250 m E,Slope Base Shallow Profiler - 250 m E,bottle_data
+-395113,198314,44.537032878189,-125.38570545241402,29,bottle,Slope Base Shallow Profiler - 250 m E,Slope Base Shallow Profiler - 250 m E,bottle_data
+-395106,198289,44.53141843334531,-125.38348405992917,31,bottle,Slope Base Shallow Profiler,Slope Base Shallow Profiler,bottle_data
+-395097,198271,44.52737603305785,-125.38062798387723,2,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-395097,198272,44.5276006108516,-125.38062798387723,10,bottle,Slope Base Deep Profiler; Oregon Offshore Deep Profiler,Slope Base Deep Profiler; Oregon Offshore Deep Profiler,bottle_data
+-395096,198267,44.52647772188286,-125.38031064209369,1,bottle,Slope Base Deep Profiler,Slope Base Deep Profiler,bottle_data
+-395096,198269,44.52692687747036,-125.38031064209369,1,bottle,Slope Base Deep Profiler,Slope Base Deep Profiler,bottle_data
+-395096,198290,44.53164301113906,-125.38031064209369,22,bottle,Slope Base Deep Profiler,Slope Base Deep Profiler,bottle_data
+-395096,198309,44.535909989220265,-125.38031064209369,39,bottle,Slope Base Shallow Profiler - 1300 m NE,Slope Base Shallow Profiler - 1300 m NE,bottle_data
+-395095,198269,44.52692687747036,-125.37999330031013,2,bottle,Slope Base Deep Profiler,Slope Base Deep Profiler,bottle_data
+-395094,198269,44.52692687747036,-125.37967595852659,2,bottle,Slope Base Deep Profiler,Slope Base Deep Profiler,bottle_data
+-395090,198316,44.5374820337765,-125.37840659139239,20,bottle,Slope Base Shallow Profiler,Slope Base Shallow Profiler,bottle_data
+-395081,198254,44.52355821056414,-125.37555051534045,25,bottle,Slope Base Deep Profiler,Slope Base Deep Profiler,bottle_data
+-395080,198257,44.52423194394538,-125.37523317355691,21,bottle,Slope Base Deep Profiler,Slope Base Deep Profiler,bottle_data
+-395077,198271,44.52737603305785,-125.37428114820626,14,bottle,Slope Base Deep Profiler - 500 m E,Slope Base Deep Profiler - 500 m E,bottle_data
+-395068,198266,44.52625314408911,-125.37142507215432,34,bottle,Slope Base Deep Profiler - 750 m E,Slope Base Deep Profiler - 750 m E,bottle_data
+-394362,198457,44.56914750269493,-125.14738177296888,1,bottle,Southern Hydrate Ridge,Southern Hydrate Ridge,bottle_data
+-394362,198458,44.569372080488684,-125.14738177296888,1,bottle,Southern Hydrate Ridge,Southern Hydrate Ridge,bottle_data
+-394360,198459,44.56959665828243,-125.14674708940179,23,bottle,Southern Hydrate Ridge,Southern Hydrate Ridge,bottle_data
+-394360,198460,44.56982123607618,-125.14674708940179,1,bottle,Southern Hydrate Ridge,Southern Hydrate Ridge,bottle_data
+-394360,198467,44.571393280632414,-125.14674708940179,1,bottle,Southern Hydrate Ridge - 100 m N of Einstein's Grotto,Southern Hydrate Ridge - 100 m N of Einstein's Grotto,bottle_data
+-394359,198460,44.56982123607618,-125.14642974761824,1,bottle,Southern Hydrate Ridge,Southern Hydrate Ridge,bottle_data
+-394358,198453,44.56824919151994,-125.1461124058347,3,bottle,Southern Hydrate Ridge - 90 m E of plume,Southern Hydrate Ridge - 90 m E of plume,bottle_data
+-393787,197522,44.35916726554078,-124.96491024742835,3,bottle,Oregon Offshore BEP,Oregon Offshore BEP,bottle_data
+-393786,197525,44.359840998922024,-124.96459290564479,3,bottle,Oregon Offshore BEP,Oregon Offshore BEP,bottle_data
+-393779,197589,44.37421397772188,-124.96237151315995,41,bottle,Oregon Offshore Shallow Profiler - 500 m W,Oregon Offshore Shallow Profiler - 500 m W,bottle_data
+-393776,197568,44.36949784405318,-124.96141948780931,25,bottle,Oregon Offshore Shallow Profiler,Oregon Offshore Shallow Profiler,bottle_data
+-393776,197577,44.37151904419691,-124.96141948780931,25,bottle,Oregon Offshore Shallow Profiler,Oregon Offshore Shallow Profiler,bottle_data
+-393772,197569,44.36972242184693,-124.96015012067511,20,bottle,Oregon Offshore Deep Profiler - 250 m E,Oregon Offshore Deep Profiler - 250 m E,bottle_data
+-393772,197587,44.37376482213439,-124.96015012067511,27,bottle,Oregon Offshore Shallow Profiler - 250 m W,Oregon Offshore Shallow Profiler - 250 m W,bottle_data
+-393770,197589,44.37421397772188,-124.95951543710801,54,bottle,Oregon Offshore Shallow Profiler - 250 m W,Oregon Offshore Shallow Profiler - 250 m W,bottle_data
+-393764,197577,44.37151904419691,-124.95761138640673,27,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-393761,197589,44.37421397772188,-124.95665936105608,4,bottle,Oregon Offshore Shallow Profiler,Oregon Offshore Shallow Profiler,bottle_data
+-393760,197584,44.37309108875314,-124.95634201927253,32,bottle,Oregon Offshore Shallow Profiler,Oregon Offshore Shallow Profiler,bottle_data
+-393760,197588,44.373989399928135,-124.95634201927253,3,bottle,Axial Base Shallow Profiler,Axial Base Shallow Profiler,bottle_data
+-393759,197586,44.37354024434064,-124.95602467748898,3,bottle,Oregon Offshore Shallow Profiler,Oregon Offshore Shallow Profiler,bottle_data
+-393759,197589,44.37421397772188,-124.95602467748898,3,bottle,Axial Base Shallow Profiler,Axial Base Shallow Profiler,bottle_data
+-393756,197555,44.36657833273446,-124.95507265213833,35,bottle,Oregon Offshore Deep Profiler - 250 m SW; Oregon Offshore Deep Profiler - 500 m SW,Oregon Offshore Deep Profiler - 250 m SW; Oregon Offshore Deep Profiler - 500 m SW,bottle_data
+-393754,197589,44.37421397772188,-124.95443796857124,16,bottle,Oregon Offshore Shallow Profiler - 600 m E,Oregon Offshore Shallow Profiler - 600 m E,bottle_data
+-393753,197595,44.37556144448437,-124.95412062678768,41,bottle,Oregon Offshore Shallow Profiler - 250 m NE,Oregon Offshore Shallow Profiler - 250 m NE,bottle_data
+-393752,197567,44.369273266259434,-124.95380328500414,3,bottle,Oregon Offshore BEP,Oregon Offshore BEP,bottle_data
+-393752,197568,44.36949784405318,-124.95380328500414,2,bottle,Oregon Offshore BEP,Oregon Offshore BEP,bottle_data
+-393751,197567,44.369273266259434,-124.95348594322058,3,bottle,Oregon Offshore BEP,Oregon Offshore BEP,bottle_data
+-393750,197587,44.37376482213439,-124.95316860143704,30,bottle,Oregon Offshore Shallow Profiler - 250 m E,Oregon Offshore Shallow Profiler - 250 m E,bottle_data
+-393749,197562,44.368150377290696,-124.95285125965349,2,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-393749,197563,44.36837495508444,-124.95285125965349,10,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-393749,197587,44.37376482213439,-124.95285125965349,1,bottle,Oregon Offshore Shallow Profiler - 250 m E,Oregon Offshore Shallow Profiler - 250 m E,bottle_data
+-393748,197562,44.368150377290696,-124.95253391786994,4,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-393748,197569,44.36972242184693,-124.95253391786994,16,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-393748,197581,44.3724173553719,-124.95253391786994,20,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-393748,197602,44.3771334890406,-124.95253391786994,27,bottle,Oregon Offshore Shallow Profiler,Oregon Offshore Shallow Profiler,bottle_data
+-393745,197587,44.37376482213439,-124.9515818925193,21,bottle,Oregon Offshore Shallow Profiler,Oregon Offshore Shallow Profiler,bottle_data
+-393744,197581,44.3724173553719,-124.95126455073574,23,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-393743,197581,44.3724173553719,-124.9509472089522,23,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-393742,197588,44.373989399928135,-124.95062986716866,31,bottle,Oregon Offshore Shallow Profiler - 500 m E,Oregon Offshore Shallow Profiler - 500 m E,bottle_data
+-393741,197562,44.368150377290696,-124.9503125253851,25,bottle,Oregon Offshore Deep Profiler - 200 m E,Oregon Offshore Deep Profiler - 200 m E,bottle_data
+-393741,197589,44.37421397772188,-124.9503125253851,31,bottle,Oregon Offshore Shallow Profiler - 500 m E,Oregon Offshore Shallow Profiler - 500 m E,bottle_data
+-393739,208631,46.854001976284586,-124.949677841818,1,CEA,WA_offshore,WA_offshore,manual_CEA_locations
+-393735,197546,44.36455713259073,-124.94840847468382,23,bottle,Oregon Offshore Deep Profiler,Oregon Offshore Deep Profiler,bottle_data
+-393727,197606,44.378031800215595,-124.94586974041542,1,CEA,OR_offshore,OR_offshore,manual_CEA_locations
+-392525,209225,46.98740118577075,-124.5644249165898,1,CEA,WA_shelf,WA_shelf,manual_CEA_locations
+-391718,198745,44.63382590729429,-124.30833009726594,3,bottle,Oregon Shelf BEP,Oregon Shelf BEP,bottle_data
+-391716,198745,44.63382590729429,-124.30769541369884,3,bottle,Oregon Shelf BEP,Oregon Shelf BEP,bottle_data
+-391711,198759,44.636969996406755,-124.3061087047811,2,bottle,Oregon Shelf BEP,Oregon Shelf BEP,bottle_data
+-391711,198760,44.6371945742005,-124.3061087047811,12,bottle,Oregon Shelf BEP - 20 m NW,Oregon Shelf BEP - 20 m NW,bottle_data
+-391710,198760,44.6371945742005,-124.30579136299755,9,bottle,Oregon Shelf BEP,Oregon Shelf BEP,bottle_data
+-391708,198759,44.636969996406755,-124.30515667943045,12,bottle,Oregon Shelf BEP - 70 m NE,Oregon Shelf BEP - 70 m NE,bottle_data
+-391702,198752,44.63539795185052,-124.30325262872915,1,CEA,OR_shelf,OR_shelf,manual_CEA_locations
+-391595,209877,47.13382590729429,-124.26929705788943,1,CEA,WA_inshore,WA_inshore,manual_CEA_locations
+-391050,198860,44.659652353575275,-124.09634578585536,1,CEA,OR_inshore,OR_inshore,manual_CEA_locations

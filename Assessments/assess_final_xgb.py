@@ -31,8 +31,8 @@ from make_single_target_data import make_single_target_data
 from subregion_creation import subregion_creation
 from withhold_test_years import withhold_test_years
 
-TARGET = "TA_misfit"
-HYPOTHESIS = "04"
+TARGET = "NO3_misfit"
+HYPOTHESIS = "A"
 STEP = 5
 RESULTS_DIR = ALGORITHM_DIR / "xgb_results"
 OUTPUT_DIR = ASSESSMENTS_DIR / "assessment_results"
@@ -102,8 +102,8 @@ def main() -> None:
     # Train final model here
     from train_final_model import fit_final_xgb_all_data
 
-    TARGET = "TA_misfit"
-    HYPOTHESIS = "04"
+    TARGET = "NO3_misfit"
+    HYPOTHESIS = "A"
     METHOD = "year"
 
     FINAL_OUTPUT_DIR = ASSESSMENTS_DIR / "xgb_results"
@@ -193,8 +193,8 @@ from assessment_figures import (
     histogram_misfit,
 )
 
-TARGET = "TA_misfit"
-HYPOTHESIS = "04"
+TARGET = "NO3_misfit"
+HYPOTHESIS = "A"
 
 predictions_csv = (
     RESULTS_DIR
