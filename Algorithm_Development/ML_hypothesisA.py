@@ -9,36 +9,25 @@ Initial machine learning training, testing the following hypothesis:
     predicted.
     
     DEFAULT_HYPOTHESES
-        "A":
-            "lat", "lon", "z", "decimal_year", "sin_doy", "cos_doy",
-            "region", "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
-            "NO3 (uM)", "log_Chl", "NH4 (uM)"
+        A: lat, lon, z, decimal year, sin(doy), cos(doy), region, SA, CT, TA, 
+        DIC, DO, NO3, log(Chl), NH4
         
-        "0": 
-            "lat", "lon", "z", "decimal_year", "sin_doy", "cos_doy",
-            "region"
+        0: lat, lon, z, decimal year, sin(doy), cos(doy), region
         
-        # No latitude, longitude, or depth; modeled SA/CT retained.
-        "A1": 
-            "decimal_year", "sin_doy", "cos_doy", "region",
-            "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
-            "NO3 (uM)", "log_Chl", "NH4 (uM)",
+        A1: decimal year, sin(doy), cos(doy), region, SA, CT, TA,  DIC, DO, 
+        NO3, log(Chl), NH4
         
-        # Biogeochemical predictors only, plus region.
-        "A2": 
-            "region", "SA", "CT", "TA (uM)", "DIC (uM)", "DO (uM)",
-            "NO3 (uM)", "log_Chl", "NH4 (uM)",
+        A2: region, SA, CT, TA, DIC, DO, NO3, log(Chl), NH4
         
-        # Spatial/depth plus modeled biogeochemistry, without season.
-        "A3": 
-            "lat", "lon", "z", "region", "SA", "CT", "TA (uM)",
-            "DIC (uM)", "DO (uM)", "NO3 (uM)", "log_Chl", "NH4 (uM)",
+        A3: lat, lon, z, region, SA, CT, TA, DIC, DO, NO3, log(Chl), NH4
         
-        "01": ["decimal_year", "sin_doy", "cos_doy", "region"],
-        "02": ["region"],
-        "03": ["lat", "lon", "z", "region"],
-        "04": ["region", "SA", "CT"],
-    }
+        01: decimal year, sin(doy), cos(doy), region
+        
+        02: region
+        
+        03: lat, lon, z, region
+        
+        04: region, SA, CT
     
 @author: larissadias
 """
