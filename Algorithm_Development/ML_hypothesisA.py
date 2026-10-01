@@ -210,13 +210,13 @@ with timed_part("PART 1: data preparation"):
     # Choose one to plot
     plot_withhelddata(
         splits,
-        target="NO3_misfit",
+        target="DO_misfit",
         hypothesis="A",
     )
 
     plot_withhelddata(
         splits,
-        target="NO3_misfit",
+        target="DO_misfit",
         hypothesis="0",
     )
 
@@ -276,7 +276,7 @@ with timed_part("PART 2: XGBoost model comparison"):
     combined_results, summary_df, comparison = (
         compare_xgb_to_baseline(
             cv_splits,
-            target="NO3_misfit",
+            target="DO_misfit",
             method="year",
             hypotheses=hypotheses,
             tune=True,
@@ -373,7 +373,7 @@ with timed_part("PART 2: XGBoost model comparison"):
 from xgb_single_target_cv import run_xgb_cv
 from sklearn.metrics import mean_squared_error
     
-selected_hypothesis = "A"
+selected_hypothesis = "A3"
 
 output_dir = Path("xgb_results")
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -381,7 +381,7 @@ output_dir.mkdir(parents=True, exist_ok=True)
 with timed_part("PART 3: selected-model tuned CV"):
     selected_fold_results, selected_predictions, selected_models = run_xgb_cv(
         cv_splits,
-        target="NO3_misfit",
+        target="DO_misfit",
         method="year",
         hypothesis=selected_hypothesis,
         tune=True,
@@ -391,7 +391,7 @@ with timed_part("PART 3: selected-model tuned CV"):
     print(selected_fold_results.to_string(index=False))
 
     prefix = (
-        f"NO3_misfit_year_{selected_hypothesis}"
+        f"DO_misfit_year_{selected_hypothesis}"
     )
 
     selected_fold_results.to_csv(
@@ -426,9 +426,9 @@ from pathlib import Path
 import json
 
 with timed_part("PART 4: final model development"):
-    TARGET = "NO3_misfit"
+    TARGET = "DO_misfit"
     METHOD = "year"
-    SELECTED_HYPOTHESIS = "A"
+    SELECTED_HYPOTHESIS = "A3"
     OUTPUT_DIR = Path(__file__).resolve().parent / "xgb_results"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     PREFIX = f"{TARGET}_{SELECTED_HYPOTHESIS}_{METHOD}"
@@ -457,9 +457,9 @@ with timed_part("PART 4: final model development"):
 # Calibration
 #=================================================================#
 from ml_calibration import calibrate_predictions
-TARGET = "NO3_misfit"
+TARGET = "DO_misfit"
 METHOD = "year"
-SELECTED_HYPOTHESIS = "A"
+SELECTED_HYPOTHESIS = "A3"
 
 plot_df_xgb, stats_xgb, fig_xgb, ax_xgb = calibrate_predictions(
     selected_predictions,

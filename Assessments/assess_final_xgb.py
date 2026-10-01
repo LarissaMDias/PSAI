@@ -31,8 +31,8 @@ from make_single_target_data import make_single_target_data
 from subregion_creation import subregion_creation
 from withhold_test_years import withhold_test_years
 
-TARGET = "NO3_misfit"
-HYPOTHESIS = "A"
+TARGET = "DO_misfit"
+HYPOTHESIS = "A3"
 STEP = 5
 RESULTS_DIR = ALGORITHM_DIR / "xgb_results"
 OUTPUT_DIR = ASSESSMENTS_DIR / "assessment_results"
