@@ -8,14 +8,14 @@
   "random_state": 42,
   "best_params": {
     "subsample": 0.7,
-    "reg_lambda": 10.0,
+    "reg_lambda": 5.0,
     "n_estimators": 200,
-    "min_child_weight": 1,
-    "max_depth": 3,
+    "min_child_weight": 7,
+    "max_depth": 6,
     "learning_rate": 0.02,
     "colsample_bytree": 1.0
   },
-  "best_inner_rmse": 39.80999616439926,
+  "best_inner_rmse": 38.312253765178355,
   "feature_names": [
     "SA",
     "CT",
@@ -26,8 +26,7 @@
     "South Sound",
     "Whidbey Basin",
     "coastal",
-    "offshore",
-    "assessment_row_id"
+    "offshore"
   ],
   "uses_all_available_data": true
 }
