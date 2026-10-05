@@ -156,7 +156,7 @@ with timed_part("PART 1: data preparation"):
     print(diagnostics)
     
     # Largest misfits
-    for target in ["TA_misfit", "DIC_misfit", "NO3_misfit", "NH4_misfit"]:
+    for target in ["TA_misfit", "DIC_misfit", "NO3_misfit", "NH4_misfit", "DO_misfit"]:
         print(f"\nLargest absolute {target} values:")
         print(
             y[target]
@@ -165,7 +165,7 @@ with timed_part("PART 1: data preparation"):
             .head(10)
         )
     # Locations and original values 
-    target = "DO_misfit"
+    target = "TA_misfit"
 
     idx = y[target].abs().nlargest(10).index
 
@@ -199,13 +199,13 @@ with timed_part("PART 1: data preparation"):
     # Choose one to plot
     plot_withhelddata(
         splits,
-        target="DO_misfit",
+        target="TA_misfit",
         hypothesis="A",
     )
 
     plot_withhelddata(
         splits,
-        target="DO_misfit",
+        target="TA_misfit",
         hypothesis="0",
     )
 
@@ -258,14 +258,16 @@ with timed_part("PART 1: data preparation"):
 # k-fold validation for XGB and hyperparameter tuning
 #=================================================================#
 from mean_baseline_cv import compare_xgb_to_baseline
+from shap_plot import plot_xgb_shap_cv
+from xgb_single_target_cv import run_xgb_cv
 
-hypotheses = ("A", "0", "A1", "A2", "A3", "01", "02", "03", "04")
+hypotheses = ("A", "0", "A3")
 
 with timed_part("PART 2: XGBoost model comparison"):
     combined_results, summary_df, comparison = (
         compare_xgb_to_baseline(
             cv_splits,
-            target="DO_misfit",
+            target="TA_misfit",
             method="year",
             hypotheses=hypotheses,
             tune=True,
@@ -282,7 +284,28 @@ with timed_part("PART 2: XGBoost model comparison"):
     print(rmse)
 
     selected_hypothesis = "A"
+    
+    selected_fold_results, selected_predictions, selected_models = run_xgb_cv(
+        cv_splits,
+        target="TA_misfit",
+        method="year",
+        hypothesis=selected_hypothesis,
+        tune=True,
+        n_iter=12,
+    )
 
+    shap_importance, shap_bar_fig, shap_beeswarm_fig = plot_xgb_shap_cv(
+        cv_splits,
+        selected_models,
+        target="TA_misfit",
+        method="year",
+        hypothesis=selected_hypothesis,
+        output_dir="xgb_results",
+        max_display=20,
+        show=True,
+    )
+
+    print(shap_importance)
     if selected_hypothesis in rmse.columns:
         for hypothesis in rmse.columns:
             if hypothesis != selected_hypothesis:

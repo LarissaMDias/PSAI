@@ -30,9 +30,10 @@ from model_df_create import model_df_create
 from make_single_target_data import make_single_target_data
 from subregion_creation import subregion_creation
 from withhold_test_years import withhold_test_years
+from percent_MAE_map import plot_percentage_error_map
 
-TARGET = "DO_misfit"
-HYPOTHESIS = "A3"
+TARGET = "TA_misfit"
+HYPOTHESIS = "04"
 STEP = 5
 RESULTS_DIR = ALGORITHM_DIR / "xgb_results"
 OUTPUT_DIR = ASSESSMENTS_DIR / "assessment_results"
@@ -102,8 +103,8 @@ def main() -> None:
     # Train final model here
     from train_final_model import fit_final_xgb_all_data
 
-    TARGET = "NO3_misfit"
-    HYPOTHESIS = "A"
+    TARGET = "TA_misfit"
+    HYPOTHESIS = "04"
     METHOD = "year"
 
     FINAL_OUTPUT_DIR = ASSESSMENTS_DIR / "xgb_results"
@@ -163,7 +164,12 @@ def main() -> None:
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     prefix = f"{TARGET}_{HYPOTHESIS}_withheld_years"
+    test_lon = model_by_id.loc[row_ids, "lon"].to_numpy(dtype=float)
+    test_lat = model_by_id.loc[row_ids, "lat"].to_numpy(dtype=float)
+    
     output = pd.DataFrame({
+        "test_lon": test_lon,
+        "test_lat": test_lat,
         "observed": observed_misfit,
         "predicted": predicted,
         "predicted_calibrated": calibrated,
@@ -193,8 +199,8 @@ from assessment_figures import (
     histogram_misfit,
 )
 
-TARGET = "NO3_misfit"
-HYPOTHESIS = "A"
+TARGET = "TA_misfit"
+HYPOTHESIS = "04"
 
 predictions_csv = (
     RESULTS_DIR
@@ -251,6 +257,42 @@ histogram_misfit(
     bins=50,
     show=True,
 )
+    
+print(pd.read_csv(predictions_csv).columns.tolist())
 
-# Insert one more figure with map of %MAE as in bgc workshop
+plot_df, percentage_metrics, fig = plot_percentage_error_map(
+    predictions_csv=prediction_path,
+    output_path=figure_path,
+    raw_misfit_column="predicted",
+    calibrated_misfit_column="predicted_calibrated",
+    lon_column="test_lon",
+    lat_column="test_lat",
+    observed_ta_column="observed_value",
+    original_ta_column="model_original",
+    map_extent=(-123.5, -122.0, 47.0, 49.0),
+    percentile=98,
+    show=True,
+)
+# %% Some additional metrics
 
+valid = (
+    np.isfinite(observed)
+    & np.isfinite(original)
+    & np.isfinite(adjusted)
+    & (observed != 0)
+)
+
+observed_v = observed[valid]
+original_v = original[valid]
+adjusted_v = adjusted[valid]
+
+original_pct_mae = np.mean(
+    np.abs(100 * (original_v - observed_v) / observed_v)
+)
+
+adjusted_pct_mae = np.mean(
+    np.abs(100 * (adjusted_v - observed_v) / observed_v)
+)
+
+print("Original percentage MAE:", original_pct_mae)
+print("Adjusted percentage MAE:", adjusted_pct_mae)
