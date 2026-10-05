@@ -25,8 +25,8 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # -----------------------------------------------------------------------------
 # User settings: define these only once
 # -----------------------------------------------------------------------------
-VARIABLE = "TA"       # Examples: "TA", "DIC", "pH", "O2"
-HYPOTHESIS = "04"
+VARIABLE = "NO3"       # Examples: "TA", "DIC", "pH", "O2"
+HYPOTHESIS = "A"
 STEP = 5
 METHOD = "year"
 
@@ -35,12 +35,14 @@ METHOD = "year"
 PHYSICAL_VALUE_COLUMNS = {
     "TA": "TA (uM)",
     "DIC": "DIC (uM)",
+    "DO": "DO (uM)",
 }
 
 # Display units used in plot titles and metrics.
 DISPLAY_UNITS = {
     "TA": "µmol kg$^{-1}$",
     "DIC": "µmol kg$^{-1}$",
+    "DO": "µmol kg$^{-1}$"
 }
 
 # Optional map limits. Set to None for a global map.
