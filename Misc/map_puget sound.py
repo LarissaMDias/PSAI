@@ -58,9 +58,14 @@ def add_gridlines(ax, labels=False, fontsize=8, major=False):
         gl.ylabel_style = {"size": fontsize}
 
 
-# 1. Global locator map
+# 1. Global locator map centered on the Pacific Ocean
 fig1 = plt.figure(figsize=(7, 5.4), constrained_layout=True)
-ax1 = fig1.add_subplot(1, 1, 1, projection=ccrs.Robinson())
+ax1 = fig1.add_subplot(
+    1,
+    1,
+    1,
+    projection=ccrs.Robinson(central_longitude=180),
+)
 ax1.set_global()
 add_base(ax1)
 add_gridlines(ax1, major=True)
@@ -75,7 +80,7 @@ ax1.text(
     transform=ccrs.PlateCarree(),
     zorder=6,
 )
-fig1.savefig("puget_sound_global.png", dpi=300, bbox_inches="tight")
+fig1.savefig("puget_sound_global_pacific.png", dpi=300, bbox_inches="tight")
 
 # 2. Regional context map
 fig2 = plt.figure(figsize=(7, 5.4), constrained_layout=True)
