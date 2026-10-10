@@ -61,6 +61,7 @@ from plot_misfits import plot_misfits
 import pandas as pd
 from contextlib import contextmanager
 from time import perf_counter
+from plot_original_misfits import plot_original_misfits
 
 @contextmanager
 def timed_part(name: str):
@@ -183,6 +184,15 @@ with timed_part("PART 1: data preparation"):
 
     print(check)
     
+    misfit_map_df, original_misfit_stats, fig, ax = plot_original_misfits(
+    obs,
+    model,
+    target="TA_misfit",
+    output_path=Path("xgb_results") / "TA_original_misfit_map.png",
+    map_extent=(-123.5, -122.0, 47.0, 49.0),
+    percentile=98,
+    show=True,
+)
     # Creating dictionary of results for all possible outputs. Could not make a 
     # multi-predictor model due to missing data
     results = make_single_target_data(
