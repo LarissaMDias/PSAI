@@ -25,8 +25,8 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # -----------------------------------------------------------------------------
 # User settings: define these only once
 # -----------------------------------------------------------------------------
-VARIABLE = "NO3"       # Examples: "TA", "DIC", "pH", "O2"
-HYPOTHESIS = "A"
+VARIABLE = "TA"       # Examples: "TA", "DIC", "pH", "O2"
+HYPOTHESIS = "04"
 STEP = 5
 METHOD = "year"
 
