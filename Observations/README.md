@@ -4,27 +4,27 @@ This folder contains compiled observations, information about the original data 
 
 ## Organization
 Following methods used by the [LiveOcean](https://github.com/parkermac/LO/tree/main/obs) modeling team, the following naming conventions and units have been used for processed variables contained within these datasets.
--source: string identifier for the database (e.g., 'dfo1', 'ecology_nc')
--otype: observation type (e.g., 'ctd', 'bottle', 'moor', 'other')
--name: station name or None
--cruse: cruise name or None
--index: index of sampling, unique for each sampling event at a particular depth
--year
--lon: degrees from -180 to 180
--lat: degrees from -90 to 90
--time: datetime in UTC
--z: depth in m
--SA: absolute salinity
--CT: conservative temperature in degrees C
--DO (uM): dissolved oxygen in umol L-1
--NO3 (uM): nitrate in umol L-1
--NO2 (uM): nitrite in umol L-1
--NH4 (uM): ammonium in umol L-1
--PO4 (uM): phosphate in umol L-1
--SiO4 (uM): silicate in umol L-1
--TA (uM): total alkalinity in umol L-1
--DIC (uM): dissolved inorganic carbon in umol L-1
--Chl (mg m-3): chlorophyll a concentration in mg m-3
+- source: string identifier for the database (e.g., 'dfo1', 'ecology_nc')
+- otype: observation type (e.g., 'ctd', 'bottle', 'moor', 'other')
+- name: station name or None
+- cruse: cruise name or None
+- index: index of sampling, unique for each sampling event at a particular depth
+- year
+- lon: degrees from -180 to 180
+- lat: degrees from -90 to 90
+- time: datetime in UTC
+- z: depth in m
+- SA: absolute salinity
+- CT: conservative temperature in degrees C
+- DO (uM): dissolved oxygen in umol L-1
+- NO3 (uM): nitrate in umol L-1
+- NO2 (uM): nitrite in umol L-1
+- NH4 (uM): ammonium in umol L-1
+- PO4 (uM): phosphate in umol L-1
+- SiO4 (uM): silicate in umol L-1
+- TA (uM): total alkalinity in umol L-1
+- DIC (uM): dissolved inorganic carbon in umol L-1
+- Chl (mg m-3): chlorophyll a concentration in mg m-3
 
 ## Data Sources
 
