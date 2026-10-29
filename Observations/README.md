@@ -28,6 +28,10 @@ Following methods used by the [LiveOcean](https://github.com/parkermac/LO/tree/m
 
 ## Data Sources
 
+### Preprocessed Data from LiveOcean
+
+The following datasets were preprocessed and paired to LiveOcean model output. Original datasets are not included in this folder, please see below for accessing the data and metadata.
+
 1. [Canada Department of Fisheries and Oceans (DFO)](https://data.cioospacific.ca/erddap/index.html): Data collected via bottle and CTD spanning 1930-2021, by Susan Allen's group. Further information and preprocessing code is available on the [LiveOcean/obs](https://github.com/parkermac/LO/tree/main/obs) GitHub page; identical methods were used here and therefore this code is not replicated within this repository. Source name: 'dfo1'
 2. [Washington State Department of Ecology](https://ecology.wa.gov/water-shorelines/water-monitoring-research): Repeat station data collected from Washington State estuaries via bottle and CTD spanning 1999-2024. Further information and preprocessing code is available on the [LiveOcean/obs](https://github.com/parkermac/LO/tree/main/obs) GitHub page; identical methods were used here and therefore this code is not replicated within this repository. Source name: 'ecology_nc'
 3. [Salish Sea Dataset](https://www.ncei.noaa.gov/access/ocean-carbon-acidification-data-system/oceans/SalishCruise_DataPackage.html): Bottle data collected by researchers at NOAA's Pacific Marine Environmental Laboratory and the University of Washington spanning 2008-2018. Further information and preprocessing code is available on the [LiveOcean/obs](https://github.com/parkermac/LO/tree/main/obs) GitHub page; identical methods were used here and therefore this code is not replicated within this repository. Source name: 'nceiSalish'
@@ -37,3 +41,7 @@ Following methods used by the [LiveOcean](https://github.com/parkermac/LO/tree/m
 7. [World Ocean Database](https://www.ncei.noaa.gov/products/world-ocean-database): Historic regional bottle data spanning 1993-2014. Further information and preprocessing code is available on the [LiveOcean/obs](https://github.com/parkermac/LO/tree/main/obs) GitHub page; identical methods were used here and therefore this code is not replicated within this repository. Source name: 'WOD'
 8. [King County Monitoring Data](https://data.kingcounty.gov/Environment-Waste-Management/Water-Quality/vwmt-pvjw): Bottle and CTD data from King County, Washington, spanning 1965-2026. Further information and preprocessing code is available on the [LiveOcean/obs](https://github.com/parkermac/LO/tree/main/obs) GitHub page; identical methods were used here and therefore this code is not replicated within this repository. Source name: 'kc'
 9. [KingCounty Monitoring Data - Point Jefferson](https://data.kingcounty.gov/Environment-Waste-Management/WLRD-Sites/wbhs-bbzf): Bottle and cTD data collected within King County, Washington near Point Jefferson, spanning 1970-2023. Further information and preprocessing code is available on the [LiveOcean/obs](https://github.com/parkermac/LO/tree/main/obs) GitHub page; identical methods were used here and therefore this code is not replicated within this repository. Source name: 'kc_pointJefferson'
+
+### Additional Data 
+
+Each dataset listed here includes a folder with a README, and original plus quality-controlled datasets and procedures for quality control.
