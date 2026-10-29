@@ -3,7 +3,8 @@
 """
 Created on Thu Aug 13 13:52:57 2026
 
-Grouping Anemone data into box extractions, as needed
+Grouping Anemone data into box for LiveOcean model extractions, as needed.
+This script doesn't do any pre-processing'
 
 @author: lara
 """

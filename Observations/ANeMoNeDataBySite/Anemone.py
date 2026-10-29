@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Taking a look at the anemone data
+This is an initial look at the anemone data, not used for processing in any 
+way, but rather to get coordinate information.
 
 Created on Mon Jul 20 16:00:57 2026
 
@@ -16,8 +17,7 @@ import json
 import re
 import pprint
 
-# %% Trying to get the lat / lon from the storymap
-# %%
+# %% Obtaining lat / lon
 
 webmap_id = "39b09f9d6f0d49688b8a30b16af2bd72"
 
