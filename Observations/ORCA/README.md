@@ -28,4 +28,4 @@ Quality control consists of QARTOD-based identification of bad data, and flaggin
 2 - not evaluated
 3 - suspect
 4 - fail
-5 - missing
+9 - missing
