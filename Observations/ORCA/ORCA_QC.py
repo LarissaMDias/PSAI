@@ -37,12 +37,15 @@ QC flags are as follows:
     2 - NOT EVALUATED
     3 - SUSPECT
     4 - FAIL
-    5 - MISSING
+    9 - MISSING
 
 @author: lara
 """
 import xarray as xr
 from pathlib import Path
+import numpy as np
+import pandas as pd
+import gsw
 
 # First find the NetCDF3 file, which was previously downloaded from ERDDAP
 StationName = "DB" # choose any station abbreviation here
@@ -67,21 +70,126 @@ print(ds["sea_water_temperature"].dims)
 print(ds["sea_water_temperature"].shape)
 
 
-# %% First get rid of any poor quality flags, which are provided for salinity, 
-# chlorophyll, NO3, DO, and temperature. Bad data has already been removed 
-# during gridding, but we want to also remove suspect data that is flagged. We 
-# also want to remove missing values, flagged with -555
+# %% First get rid of any poor quality flags
+# Provided for salinity, chlorophyll, NO3, DO, and temperature. Bad data has 
+# already been removed during gridding, but we want to also remove suspect
+# data  or -127, -555 flags
 
+output_file = f"ORCA_{StationName}_qc_filtered.nc"
 
+# data_df: measurement data; qc_df: corresponding QC flags in matching row 
+# order
+variables = [
+    "sea_water_temperature",
+    "sea_water_practical_salinity",
+    "mass_concentration_of_chlorophyll_a_in_sea_water",
+    "mole_concentration_of_nitrate_in_sea_water",
+    "mass_concentration_of_oxygen_in_sea_water",
+]
 
+pair_dims = ("cast_start_time", "depth")
+
+# Create a row-major ordering number for every cast_start_time/depth cell 
+# combination
+pair_order = np.arange(
+    ds.sizes["cast_start_time"] * ds.sizes["depth"], dtype=np.int64
+).reshape(ds.sizes["cast_start_time"], ds.sizes["depth"])
+ds = ds.assign_coords(_pair_order=(pair_dims, pair_order))
+
+for variable in variables:
+    qc_variable = f"{variable}_qc_aggregate"
+    if variable not in ds or qc_variable not in ds:
+        raise KeyError(f"Missing measurement or QC variable: {variable} / {qc_variable}")
+
+    valid = (
+        (ds[qc_variable] == 1)
+        & ds[variable].notnull()
+        & ~ds[variable].isin([-555, -127])
+    )
+    ds[variable] = ds[variable].where(valid)
+
+# Save here if desired
+# ds.to_netcdf(output_file)
+# ds.close()
 # %% Unit conversions
-# Needed:
-    # temperature (deg C) --> CT (conservative temperature)
-    # salinity --> SA (absolute salinity)
-    # sampling time (UTC), seconds since 1970-01-01T00:00:00Z --> datetime64[ns] (?)
+# Needed | Have:
+# time (datetime UTC) | sample_time (datetime64[ns], UTC when decoded)
+# CT | sea_water_temperature (deg C; in situ temperature)
+# SA | sea_water_practical_salinity
+# Chl (mg m-3) | mass_concentration_of_chlorophyll_a_in_sea_water (mg m-3)
+# NO3 (uM) | mole_concentration_of_nitrate_in_sea_water (umol/kg)
+# DO (uM) | mass_concentration_of_oxygen_in_sea_water (mg/L)
+# z | depth (m)
+# lon | longitude (deg -180 to 180)
+# lat | latitude (deg -90 to 90)
+# year | NaN (extract from sample_time)
+#
+# Pre-defined
+# source: orca
+# otype: moor
+# name: StationName
+# cruise: None
+# index: created
     
+# Handling time first, which is already datetimeUTC but needs timezone-
+# awareness
 
+obs = (
+    ds[variables + ["sample_time", "depth", "_pair_order"]]
+    .to_dataframe()
+    .reset_index()
+    .rename(columns={
+        "mass_concentration_of_chlorophyll_a_in_sea_water": "Chl (mg m-3)",
+        "sample_time": "time",
+        "depth": "z",
+        "_pair_order": "index",
+    })
+)
 
+obs["time"] = pd.to_datetime(obs["time"], utc=True)
+obs["year"] = obs["time"].dt.year
 
+station_coords = {
+    "CI": (-122.73000, 47.28000),
+    "DB": (-122.80292, 47.80342),
+    "HS": (-123.11258333, 47.42181666),
+    "HV": (-122.62785, 47.90775),
+    "PW": (-122.3916667, 47.76116667),
+    "TW": (-123.00833333, 47.375),
+}
 
+obs["lon"], obs["lat"] = station_coords[StationName]
+obs["source"] = "orca"
+obs["name"] = StationName
+obs["cruise"] = None
+obs["otype"] = "moor"
 
+SP = obs["sea_water_practical_salinity"].to_numpy(dtype=float)
+z = obs["z"].to_numpy(dtype=float)       # positive downward, meters
+lat = obs["lat"].to_numpy(dtype=float)
+lon = obs["lon"].to_numpy(dtype=float)
+
+p = gsw.p_from_z(-z, lat)                # pressure, dbar
+obs["SA"] = gsw.SA_from_SP(SP, p, lon, lat)  # Absolute Salinity
+
+obs["CT"] = gsw.CT_from_t(
+    obs["SA"].to_numpy(dtype=float),
+    obs["sea_water_temperature"].to_numpy(dtype=float),  # in-situ °C
+    p,                                                   # pressure, dbar
+)
+
+rho = gsw.rho(
+    obs["SA"].to_numpy(dtype=float),
+    obs["CT"].to_numpy(dtype=float),
+    p,  # pressure in dbar
+)  # kg/m³
+
+obs["NO3 (uM)"] = (
+    obs["mole_concentration_of_nitrate_in_sea_water"].to_numpy(dtype=float)
+    * rho / 1000
+)
+
+# O₂ molar mass = 31.998 mg/mmol
+obs["DO (uM)"] = (
+    obs["mass_concentration_of_oxygen_in_sea_water"] * 1000 / 31.998
+)
