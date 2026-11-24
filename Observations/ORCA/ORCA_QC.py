@@ -193,3 +193,83 @@ obs["NO3 (uM)"] = (
 obs["DO (uM)"] = (
     obs["mass_concentration_of_oxygen_in_sea_water"] * 1000 / 31.998
 )
+# %% Check for unphysical values and NaNs
+
+# Broad screening ranges for review, not automatic rejection criteria.
+
+bounds = {
+    "sea_water_temperature": (-2.5, 35),       # deg C, in situ
+    "sea_water_practical_salinity": (0, 40),  # practical salinity
+    "Chl (mg m-3)": (0, 100),                 # high values merit review
+    "NO3 (uM)": (0, 100),
+    "DO (uM)": (0, 625),
+    "SA": (0, 42),                            # g/kg
+    "CT": (-2.5, 35),                         # deg C
+    "z": (0, 110),                            # positive-down depth, m
+}
+
+rows = []
+for col, (low, high) in bounds.items():
+    values = pd.to_numeric(obs[col], errors="coerce")
+    finite = values[np.isfinite(values)]
+    rows.append({
+        "variable": col,
+        "missing_or_nonfinite": int((~np.isfinite(values)).sum()),
+        "below_lower_bound": int((values < low).sum()),
+        "above_upper_bound": int((values > high).sum()),
+        "min": finite.min() if not finite.empty else np.nan,
+        "max": finite.max() if not finite.empty else np.nan,
+    })
+
+summary = pd.DataFrame(rows).set_index("variable")
+print(summary.to_string())
+
+# Show flagged records for manual review; this does not remove or alter them. 
+# Change this as needed; here for chlorophyll because of negatives, which 
+# probably were related to sampling or calculation and should be kept even 
+# though negative chlorophyll is not technically possible.
+for col, (low, high) in bounds.items():
+    values = pd.to_numeric(obs[col], errors="coerce")
+    bad = values.notna() & ~np.isfinite(values) | (values < low) | (values > high)
+    if bad.any():
+        print(f"\nReview {col}: {int(bad.sum())} row(s) outside [{low}, {high}]")
+        display_cols = [c for c in ["index", "time", "z", "lon", "lat", col] if c in obs.columns]
+        print(obs.loc[bad, display_cols].head(20).to_string(index=False))
+        
+
+# Double checking nitrate, where all were NaN's. Change this as needed for 
+# different floats
+raw = xr.open_dataset(FileName, engine="scipy")
+
+nitrate = raw["mole_concentration_of_nitrate_in_sea_water"]
+nitrate_qc = raw["mole_concentration_of_nitrate_in_sea_water_qc_aggregate"]
+
+print("Finite nitrate values:", int(np.isfinite(nitrate).sum()))
+print("QC flag counts:")
+print(nitrate_qc.to_series().value_counts(dropna=False).sort_index())
+print("Finite nitrate where QC == 1:",
+      int((np.isfinite(nitrate) & (nitrate_qc == 1)).sum()))
+# There were 790 good QC nitrate measurements, checking overlap:
+no3 = obs["mole_concentration_of_nitrate_in_sea_water"]
+print("Finite nitrate:", no3.notna().sum())
+print("Finite nitrate with finite SA and CT:",
+      (no3.notna() & obs["SA"].notna() & obs["CT"].notna()).sum())
+
+# SKIPPING internal consistency of carbonate chemistry for ORCA, which lacks 
+# those measurements
+# %% Duplicate sample check, same time and depth per station
+
+key_cols = ["time", "z"]
+dupe_mask = obs.duplicated(subset=key_cols, keep=False)
+
+print(f"Rows in duplicate time-depth groups: {dupe_mask.sum()}")
+print(f"Duplicate groups: {obs.loc[dupe_mask].groupby(key_cols).ngroups}")
+
+print(
+    obs.loc[dupe_mask]
+       .sort_values(key_cols)
+       .to_string(index=False)
+)
+# %% Check for spikes and temporal consistency
+
+
