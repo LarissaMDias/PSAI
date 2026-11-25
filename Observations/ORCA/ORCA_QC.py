@@ -46,6 +46,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import gsw
+import matplotlib.pyplot as plt
+import time
+import math
 
 # First find the NetCDF3 file, which was previously downloaded from ERDDAP
 StationName = "DB" # choose any station abbreviation here
@@ -259,17 +262,111 @@ print("Finite nitrate with finite SA and CT:",
 # those measurements
 # %% Duplicate sample check, same time and depth per station
 
-key_cols = ["time", "z"]
-dupe_mask = obs.duplicated(subset=key_cols, keep=False)
+valid_obs = obs.dropna(subset=["time", "z"])
+dup_mask = valid_obs.duplicated(subset=["time", "z"], keep=False)
 
-print(f"Rows in duplicate time-depth groups: {dupe_mask.sum()}")
-print(f"Duplicate groups: {obs.loc[dupe_mask].groupby(key_cols).ngroups}")
-
+print("Rows in duplicate groups:", int(dup_mask.sum()))
 print(
-    obs.loc[dupe_mask]
-       .sort_values(key_cols)
-       .to_string(index=False)
+    "Duplicate groups:",
+    valid_obs.loc[dup_mask].groupby(["time", "z"]).ngroups
 )
-# %% Check for spikes and temporal consistency
+# %% Check for spikes and temporal consistency by examining points > 10 standard
+# deviations from the median for each variable
+
+"""
+This screens one calendar year at a time and
+flags |robust z-score| > threshold within each depth's local time series.
+Flags are review candidates, not automatic exclusions.
+"""
+
+def screen_spikes_by_depth(
+    obs,
+    variables,
+    year,
+    threshold=10.0,
+    window=11,
+    min_periods=5,
+):
+    """Return long-form candidate rows using rolling median/MAD by depth."""
+    data = obs.loc[obs["time"].notna() & obs["z"].notna()].copy()
+    data["time"] = pd.to_datetime(data["time"], utc=True)
+    data = data.loc[data["time"].dt.year.eq(year)]
+    results = []
+
+    def rolling_mad(values):
+        median = np.median(values)
+        return np.median(np.abs(values - median))
+
+    for variable in variables:
+        if variable not in data.columns:
+            print(f"Skipping missing column: {variable}")
+            continue
+
+        work = data.loc[:, [c for c in ["order_id", "time", "z", variable]
+                           if c in data.columns]].copy()
+        work[variable] = pd.to_numeric(work[variable], errors="coerce")
+        work = work.loc[np.isfinite(work[variable])].sort_values(["z", "time"])
+        if work.empty:
+            print(f"{variable}: no finite values in {year}")
+            continue
+
+        grouped = work.groupby("z", sort=False)[variable]
+        local_median = grouped.transform(
+            lambda s: s.rolling(window, center=True, min_periods=min_periods).median()
+        )
+        local_mad = grouped.transform(
+            lambda s: s.rolling(window, center=True, min_periods=min_periods)
+                      .apply(rolling_mad, raw=True)
+        )
+        robust_z = (work[variable] - local_median).abs() / (1.4826 * local_mad)
+        candidate = robust_z.gt(threshold) & robust_z.notna()
+
+        flagged = work.loc[candidate].copy()
+        if not flagged.empty:
+            flagged["variable"] = variable
+            flagged["value"] = flagged[variable]
+            flagged["local_median"] = local_median.loc[flagged.index]
+            flagged["local_MAD"] = local_mad.loc[flagged.index]
+            flagged["robust_z"] = robust_z.loc[flagged.index]
+            results.append(flagged.drop(columns=[variable]))
+
+        zero_mad = int((local_mad.eq(0) & local_median.notna()).sum())
+        print(
+            f"{variable}: checked {len(work):,} finite values; "
+            f"{int(candidate.sum()):,} candidate(s); "
+            f"{zero_mad:,} rows have zero local MAD (score undefined)"
+        )
+
+    if results:
+        return pd.concat(results, ignore_index=True).sort_values(
+            ["variable", "time", "z"]
+        )
+    return pd.DataFrame(
+        columns=["order_id", "time", "z", "variable", "value",
+                 "local_median", "local_MAD", "robust_z"]
+    )
 
 
+# Include whichever of these columns exist in `obs`.
+variables_to_screen = [
+    "Chl (mg m-3)",
+    "SA",
+    "CT",
+    "NO3 (uM)",
+    "DO (uM)",
+]
+variables_to_screen = [v for v in variables_to_screen if v in obs.columns]
+
+# Start with one year to limit memory/runtime; change year to screen another.
+candidates_2024 = screen_spikes_by_depth(
+    obs,
+    variables=variables_to_screen,
+    year=2024,
+    threshold=6.0,
+    window=11,
+    min_periods=5,
+)
+
+print(candidates_2024.head(30).to_string(index=False))
+# Optional: save flagged rows for manual review.
+# candidates_2024.to_csv("ORCA_2024_spike_candidates.csv", index=False)
